@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>First Keys — Piano Lessons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Music&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f1e7; --card:#fffdf8; --ink:#2a2420; --soft:#6f655c; --line:#e4dccd;
+  --accent:#c2562f; --accent-soft:#f6dfd3; --ok:#3f8f5a; --ok-soft:#dcefe1;
+  --blue:#4a7bd0; --purple:#8a5cc7; --gold:#e0a526;
+  --kb-h:132px; --bar-h:40px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:17px;line-height:1.5}
+button{font:inherit;cursor:pointer}
+#app{display:flex;flex-direction:column;height:100%;}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg);flex:0 0 auto}
+header h1{font-family:Fraunces,Georgia,serif;font-size:20px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{background:none;border:none;color:var(--accent);font-weight:600;padding:4px 2px}
+.pill{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--soft);white-space:nowrap}
+.pill.on{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.tap{color:var(--purple);border-color:#cdb8ea}
+main{flex:1 1 auto;overflow-y:auto;padding:14px 14px 20px;-webkit-overflow-scrolling:touch}
+.wrap{max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+h2{font-family:Fraunces,Georgia,serif;font-size:24px;line-height:1.2;margin:0 0 10px}
+.txt p{margin:0 0 10px}
+.prompt{font-size:19px;margin:0 0 6px}
+.fb{min-height:52px;margin:10px 0 4px;padding:10px 12px;border-radius:12px;background:#f4eee3;color:var(--soft);font-size:16px}
+.fb.good{background:var(--ok-soft);color:#24593a}
+.fb.miss{background:#fbeedc;color:#7a5413}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 20px;font-weight:600;font-size:17px}
+.primary:disabled{opacity:.4}
+.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 16px;font-weight:500}
+.ghost.on{border-color:var(--gold);background:#fbf0d4}
+.link{background:none;border:none;color:var(--soft);text-decoration:underline;padding:8px 4px;font-size:15px}
+.tag{display:inline-block;padding:0 7px;border-radius:6px;font-size:14px;font-weight:600}
+.tag.hint{background:#fbe7b5;color:#7a5413}.tag.blue{background:#dbe6f8;color:#2d58a3}.tag.purple{background:#e9def7;color:#5e3a96}
+.progress{display:flex;gap:5px;margin:0 0 12px}
+.progress i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.progress i.d{background:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.chip{min-width:46px;text-align:center;padding:8px 6px 6px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:19px;line-height:1.1}
+.chip small{display:block;font-size:12px;color:var(--soft);font-weight:500}
+.chip.done{background:var(--ok-soft);border-color:#a9d3b5;color:#24593a}
+.chip.cur{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--accent-soft)}}
+.staffbox{margin:10px 0 4px;overflow-x:auto}
+.staffbox svg{display:block;width:100%;height:auto}
+.staffline{stroke:#5b524a;stroke-width:1.2}
+.clef{font-family:'Noto Music','Apple Symbols','Segoe UI Symbol',serif;fill:#3b342e}
+.nh{fill:#2a2420}.stem{stroke:#2a2420;stroke-width:1.6}
+.n-done .nh{fill:var(--ok)}.n-done .stem{stroke:var(--ok)}
+.n-cur .nh{fill:var(--accent)}.n-cur .stem{stroke:var(--accent)}
+.n-cur .mark{fill:var(--accent)}
+.lab{font-size:14px;fill:var(--soft);text-anchor:middle;font-family:Inter,sans-serif}
+.lab.nm{font-weight:600;fill:#3b342e}.lab.fg{font-size:12px}
+.n-done .lab.nm{fill:var(--ok)}.n-cur .lab.nm{fill:var(--accent)}
+.lessons{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.lesson{display:flex;align-items:center;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--ink)}
+.lesson .num{flex:0 0 36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.lesson.done .num{background:var(--ok-soft);color:var(--ok)}
+.lesson b{display:block;font-weight:600}.lesson span{font-size:14px;color:var(--soft)}
+.hero{font-family:Fraunces,Georgia,serif;font-size:30px;line-height:1.15;margin:6px 0 6px}
+.sub{color:var(--soft);margin:0}
+.big{font-size:44px;text-align:center;margin:4px 0}
+/* listen bar + keyboard */
+#bar{flex:0 0 var(--bar-h);display:flex;align-items:center;gap:10px;padding:0 14px;border-top:1px solid var(--line);background:#efe8da;font-size:14px;color:var(--soft)}
+#heard{min-width:92px;font-weight:600;color:var(--ink)}
+#meter{flex:1;height:6px;border-radius:3px;background:#ddd3c2;overflow:hidden}
+#meter i{display:block;height:100%;width:0;background:var(--ok);transition:width .06s}
+#barbtn{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600}
+#kbwrap{flex:0 0 var(--kb-h);background:#2b2522;padding:6px 6px calc(8px + env(safe-area-inset-bottom));touch-action:none}
+#kb{position:relative;height:100%;display:flex;max-width:720px;margin:0 auto;user-select:none;-webkit-user-select:none}
+.key{position:relative}
+.key.w{flex:1;background:#fdfbf6;border:1px solid #9b9187;border-radius:0 0 6px 6px;margin:0 1px}
+.key.b{position:absolute;top:0;height:60%;background:#1c1816;border-radius:0 0 4px 4px;z-index:2;box-shadow:inset 0 -3px 0 #3b3430}
+.key .lbl{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:12px;color:#8b8177;font-weight:600;pointer-events:none}
+.key .fing{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:13px;color:var(--accent);font-weight:700;pointer-events:none}
+.key .dot{position:absolute;bottom:42px;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--accent);pointer-events:none}
+.key.w.hl{background:#dbe6f8}.key.b.hl{background:var(--blue)}
+.key.w.hl2{background:#e9def7}.key.b.hl2{background:var(--purple)}
+.key.w.hint{background:#fbe2a0}.key.b.hint{background:var(--gold)}
+.key.w.hint,.key.b.hint{animation:glow 1.1s ease-in-out infinite}
+@keyframes glow{50%{filter:brightness(1.12)}}
+.key.w.press{background:#bfe3c9!important}.key.b.press{background:var(--ok)!important}
+.hide-labels .lbl{display:none}
+/* sheet */
+#sheet{position:fixed;inset:0;background:rgba(30,25,20,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+#sheet.show{display:flex}
+#sheet .card{width:100%;max-width:520px;border-radius:18px 18px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0 14px}
+.seg button{flex:1;border:none;background:#fff;padding:9px 4px}
+.seg button.on{background:var(--accent);color:#fff;font-weight:600}
+@media (min-height:760px){:root{--kb-h:160px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="back" id="hdrBack" style="display:none">‹ Lessons</button>
+    <h1 id="hdrTitle">First Keys</h1>
+    <button class="pill" id="pill">Mic off</button>
+  </header>
+  <main id="main"><div class="wrap" id="screen"></div></main>
+  <div id="bar"><span id="heard">—</span><div id="meter"><i></i></div><button id="barbtn">Listen</button></div>
+  <div id="kbwrap"><div id="kb"></div></div>
+</div>
+<div id="sheet"><div class="card" id="sheetCard"></div></div>
+
+<script>
+"use strict";
+/* ---------- basics ---------- */
+const $=s=>document.querySelector(s);
+const NAMES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const pcOf=m=>((m%12)+12)%12;
+const nm=m=>NAMES[pcOf(m)];
+const isBlack=m=>[1,3,6,8,10].includes(pcOf(m));
+const LETTER={0:0,2:1,4:2,5:3,7:4,9:5,11:6};
+const store={get(k,d){try{const v=localStorage.getItem('fk_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+             set(k,v){try{localStorage.setItem('fk_'+k,JSON.stringify(v))}catch(e){}}};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const PRAISE=['Nice!','Yes — that\'s it!','Lovely.','You got it!','Spot on!','Beautiful.','Perfect.','There it is!'];
+
+/* ---------- sound ---------- */
+let ctx=null, muteUntil=0;
+function ac(){
+  if(!ctx){const C=window.AudioContext||window.webkitAudioContext; ctx=new C();}
+  if(ctx.state==='suspended') ctx.resume();
+  return ctx;
+}
+function tone(midi,when=0,dur=0.9){
+  let c; try{c=ac();}catch(e){return;}
+  const t=c.currentTime+when, f=440*Math.pow(2,(midi-69)/12);
+  const g=c.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.32,t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  const o1=c.createOscillator(); o1.type='triangle'; o1.frequency.value=f;
+  const o2=c.createOscillator(); o2.type='sine'; o2.frequency.value=f*2;
+  const g2=c.createGain(); g2.gain.value=0.25;
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(c.destination);
+  o1.start(t); o2.start(t); o1.stop(t+dur+0.05); o2.stop(t+dur+0.05);
+  muteUntil=Math.max(muteUntil, performance.now()+(when+dur)*1000+250);
+}
+let demoBusy=false;
+function playSeq(midis,step=0.5){
+  if(demoBusy) return Promise.resolve();
+  demoBusy=true;
+  midis.forEach((m,i)=>{tone(m,i*step,0.75); setTimeout(()=>kb.flash(m),i*step*1000);});
+  return new Promise(r=>setTimeout(()=>{demoBusy=false;r();},midis.length*step*1000+300));
+}
+
+/* ---------- listening ---------- */
+let mic={state:'off'};   // off | on | denied | tap
+const SENS={low:2.2,med:1,high:0.45};
+let sens=store.get('sens','med');
+let wakeLock=null;
+async function startMic(){
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('no media');
+    const c=ac();
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const src=c.createMediaStreamSource(stream);
+    const an=c.createAnalyser(); an.fftSize=2048; src.connect(an);
+    mic={state:'on',an,buf:new Float32Array(an.fftSize),sr:c.sampleRate};
+    try{ if(navigator.wakeLock) wakeLock=await navigator.wakeLock.request('screen'); }catch(e){}
+    setStatus(); return true;
+  }catch(e){
+    mic={state:'denied'}; setStatus(); return false;
+  }
+}
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState==='visible'&&mic.state==='on'){try{if(navigator.wakeLock) wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}
+});
+
+/* YIN pitch detector */
+function yin(buf,sr){
+  const W=Math.floor(buf.length/2);
+  const tMin=Math.floor(sr/1500), tMax=Math.min(W-1,Math.floor(sr/75));
+  const d=new Float32Array(tMax+1);
+  for(let tau=1;tau<=tMax;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x;}d[tau]=s;}
+  d[0]=1; let run=0;
+  for(let tau=1;tau<=tMax;tau++){run+=d[tau]; d[tau]=run?d[tau]*tau/run:1;}
+  let tau=-1;
+  for(let t=tMin;t<=tMax;t++){ if(d[t]<0.15){ while(t+1<=tMax&&d[t+1]<d[t]) t++; tau=t; break; } }
+  if(tau<0) return null;
+  let better=tau;
+  if(tau>1&&tau<tMax){const s0=d[tau-1],s1=d[tau],s2=d[tau+1],den=2*(2*s1-s2-s0); if(den) better=tau+(s2-s0)/den;}
+  return {freq:sr/better,clarity:1-d[tau]};
+}
+
+let hist=[],cand=null,lastEmit={t:0,pc:-1},stable={midi:null,n:0},noiseFloor=0.003,frame=0,heardClear=0;
+function loop(){
+  requestAnimationFrame(loop);
+  if(mic.state!=='on') return;
+  if((frame++)%2) return;
+  const now=performance.now();
+  mic.an.getFloatTimeDomainData(mic.buf);
+  let s=0; for(let i=0;i<mic.buf.length;i++) s+=mic.buf[i]*mic.buf[i];
+  const rms=Math.sqrt(s/mic.buf.length);
+  meter(rms);
+  noiseFloor = rms<noiseFloor ? noiseFloor*0.85+rms*0.15 : noiseFloor*0.997+rms*0.003;
+  const gate=Math.max(0.006*SENS[sens], noiseFloor*3);
+  if(now<muteUntil){hist=[];cand=null;stable={midi:null,n:0};return;}
+  hist.push(rms); if(hist.length>6) hist.shift();
+  let p=null;
+  if(rms>gate){
+    const r=yin(mic.buf,mic.sr);
+    if(r&&r.clarity>0.85&&r.freq>70&&r.freq<1400) p=Math.round(69+12*Math.log2(r.freq/440));
+  }
+  if(p!=null){ $('#heard').textContent='I hear: '+nm(p); heardClear=now; }
+  else if(now-heardClear>700) $('#heard').textContent='Listening…';
+  const prev=hist.slice(0,-1);
+  const onset=prev.length>=2 && rms>gate && rms>Math.min(...prev)*1.5 && now-lastEmit.t>130;
+  if(onset&&!cand) cand={t:now,votes:{}};
+  if(cand){
+    if(p!=null) cand.votes[p]=(cand.votes[p]||0)+1;
+    if(now-cand.t>100){
+      let best=null,bn=0; for(const k in cand.votes) if(cand.votes[k]>bn){bn=cand.votes[k];best=+k;}
+      cand=null;
+      if(best!=null&&bn>=2){emit(best,'mic'); stable={midi:best,n:0};}
+    }
+  }else{
+    if(p!=null){
+      if(stable.midi===p) stable.n++; else stable={midi:p,n:1};
+      if(stable.n===4&&pcOf(p)!==lastEmit.pc&&now-lastEmit.t>200) emit(p,'mic');
+    }else stable={midi:null,n:0};
+  }
+}
+requestAnimationFrame(loop);
+function meter(rms){ $('#meter i').style.width=Math.min(100,Math.sqrt(rms)*260)+'%'; }
+
+let handler=null;
+function emit(midi,source){
+  lastEmit={t:performance.now(),pc:pcOf(midi)};
+  kb.flash(midi);
+  if(handler) handler({midi,pc:pcOf(midi),source});
+}
+
+/* ---------- on-screen keyboard ---------- */
+const KB_LO=48, KB_HI=72;
+const kb={
+  keys:{},
+  build(){
+    const el=$('#kb'); el.innerHTML='';
+    const whites=[]; for(let m=KB_LO;m<=KB_HI;m++) if(!isBlack(m)) whites.push(m);
+    const n=whites.length, bw=0.62/n*100;
+    for(let m=KB_LO;m<=KB_HI;m++){
+      const k=document.createElement('div'); k.dataset.midi=m;
+      if(isBlack(m)){
+        k.className='key b';
+        const wi=whites.indexOf(m-1);
+        k.style.left=((wi+1)/n*100-bw/2)+'%'; k.style.width=bw+'%';
+      }else{
+        k.className='key w';
+        k.innerHTML=`<span class="fing"></span><span class="lbl">${nm(m)}</span>`+(m===60?'<span class="dot"></span>':'');
+      }
+      el.appendChild(k); this.keys[m]=k;
+    }
+    el.addEventListener('pointerdown',e=>{
+      const k=e.target.closest('.key'); if(!k) return; e.preventDefault();
+      const m=+k.dataset.midi;
+      tone(m,0,0.8);
+      if(mic.state!=='on'&&mic.state!=='tap'){mic.state='tap';setStatus();}
+      emit(m,'tap');
+    });
+  },
+  inRange(m){while(m<KB_LO)m+=12;while(m>KB_HI)m-=12;return m;},
+  clear(){for(const m in this.keys){this.keys[m].classList.remove('hl','hl2','hint');const f=this.keys[m].querySelector('.fing');if(f)f.textContent='';}},
+  hl(ms,cls='hl'){(ms||[]).forEach(m=>{const k=this.keys[m];if(k)k.classList.add(cls);});},
+  unhint(){for(const m in this.keys)this.keys[m].classList.remove('hint');},
+  fingers(map){for(const m in map){const k=this.keys[m];if(k){const f=k.querySelector('.fing');if(f)f.textContent=map[m];}}},
+  flash(m){const k=this.keys[this.inRange(m)]; if(!k) return; k.classList.add('press'); clearTimeout(k._t); k._t=setTimeout(()=>k.classList.remove('press'),350);}
+};
+
+/* ---------- status / settings ---------- */
+function setStatus(){
+  const p=$('#pill'), b=$('#barbtn');
+  p.className='pill';
+  if(mic.state==='on'){p.textContent='🎤 Listening';p.classList.add('on');b.style.display='none';$('#heard').textContent='Listening…';}
+  else if(mic.state==='tap'){p.textContent='👆 Tap mode';p.classList.add('tap');b.style.display='';b.textContent='Use mic';$('#heard').textContent='Tap the keys';}
+  else if(mic.state==='denied'){p.textContent='Mic blocked';b.style.display='';b.textContent='Try mic';$('#heard').textContent='Tap the keys';}
+  else {p.textContent='Mic off';b.style.display='';b.textContent='Listen';$('#heard').textContent='—';}
+}
+function openSheet(){
+  const c=$('#sheetCard');
+  c.innerHTML=`<h2>Listening</h2>
+   <div class="txt"><p>${mic.state==='on'?'I\'m listening through your phone\'s microphone.':mic.state==='denied'?micBlockedText():'Turn on listening so I can hear your real piano. Or just tap the on-screen keys.'}</p></div>
+   <div><b>Sensitivity</b> <span style="color:var(--soft);font-size:14px">— lower it if I hear notes you didn't play</span></div>
+   <div class="seg">${['low','med','high'].map(s=>`<button data-s="${s}" class="${s===sens?'on':''}">${s==='med'?'Medium':s[0].toUpperCase()+s.slice(1)}</button>`).join('')}</div>
+   <div class="row">${mic.state!=='on'?'<button class="primary" id="shMic">🎤 Turn on listening</button>':''}<button class="ghost" id="shClose">Done</button></div>`;
+  $('#sheet').classList.add('show');
+  c.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{sens=b.dataset.s;store.set('sens',sens);openSheet();});
+  const m=$('#shMic'); if(m) m.onclick=async()=>{await startMic();openSheet();};
+  $('#shClose').onclick=()=>$('#sheet').classList.remove('show');
+}
+$('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')$('#sheet').classList.remove('show');});
+$('#pill').onclick=openSheet;
+$('#barbtn').onclick=async()=>{const ok=await startMic(); if(!ok) openSheet();};
+function micBlockedText(){
+  return 'I couldn\'t reach the microphone. If your phone asked for permission, allow it and try again. If this page is open inside the Claude app, the mic is blocked there — open it from its own web address in Safari or Chrome. Meanwhile, every lesson works by tapping the keys below.';
+}
+
+/* ---------- staff drawing ---------- */
+function diat(m){return (Math.floor(m/12)-1)*7+LETTER[pcOf(m)];}
+function staffSVG(items,o={}){
+  const sp=o.spacing||44, x0=62;
+  const hasLyr=items.some(i=>i.lyric), hasFg=items.some(i=>i.finger), hasNm=items.some(i=>i.name);
+  const W=Math.max(o.minW||240,x0+items.length*sp+12);
+  const top=24,gap=12,bot=top+4*gap;
+  let y=bot+30; const yNm=hasNm?(y+=0,y):0; if(hasNm) y+=16; const yFg=hasFg?y:0; if(hasFg) y+=15; const yLy=hasLyr?y+2:0; if(hasLyr) y+=18;
+  const H=Math.max(y,bot+26);
+  const ny=pos=>bot-pos*6;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="max-width:${W*1.15}px" xmlns="http://www.w3.org/2000/svg">`;
+  for(let i=0;i<5;i++) s+=`<line class="staffline" x1="4" x2="${W-4}" y1="${top+i*gap}" y2="${top+i*gap}"/>`;
+  s+=`<text class="clef" x="8" y="${bot+11}" font-size="62">𝄞</text>`;
+  items.forEach((it,i)=>{
+    const cx=x0+i*sp+sp/2-6, pos=diat(it.midi)-30, cy=ny(pos);
+    s+=`<g class="${it.cls||''}">`;
+    if(pos<=-2) for(let p=-2;p>=pos;p-=2) s+=`<line class="staffline" x1="${cx-12}" x2="${cx+12}" y1="${ny(p)}" y2="${ny(p)}"/>`;
+    if(pos>=10) for(let p=10;p<=pos;p+=2) s+=`<line class="staffline" x1="${cx-12}" x2="${cx+12}" y1="${ny(p)}" y2="${ny(p)}"/>`;
+    s+=`<ellipse class="nh" cx="${cx}" cy="${cy}" rx="7" ry="5.2" transform="rotate(-20 ${cx} ${cy})"/>`;
+    if(pos<4) s+=`<line class="stem" x1="${cx+6.3}" x2="${cx+6.3}" y1="${cy-1}" y2="${cy-34}"/>`;
+    else s+=`<line class="stem" x1="${cx-6.3}" x2="${cx-6.3}" y1="${cy+1}" y2="${cy+34}"/>`;
+    if(it.cls==='n-cur') s+=`<path class="mark" d="M${cx-5} 4 L${cx+5} 4 L${cx} 11 Z"/>`;
+    if(it.name) s+=`<text class="lab nm" x="${cx}" y="${yNm}">${it.name}</text>`;
+    if(it.finger) s+=`<text class="lab fg" x="${cx}" y="${yFg}">${it.finger}</text>`;
+    if(it.lyric) s+=`<text class="lab" x="${cx}" y="${yLy}">${it.lyric}</text>`;
+    s+='</g>';
+  });
+  return s+'</svg>';
+}
+
+/* ---------- lesson content ---------- */
+const CPOS={0:1,2:2,4:3,5:4,7:5};             // finger by pitch class, C position
+const CPOS_KEYS={60:1,62:2,64:3,65:4,67:5};
+const CMAJ=[60,62,64,65,67,69,71,72];
+const MARY={phrases:[[64,62,60,62,64,64,64],[62,62,62,64,67,67],[64,62,60,62,64,64,64,64],[62,62,64,62,60]],
+            lyrics:[['Ma','ry','had','a','lit','tle','lamb'],['lit','tle','lamb,','lit','tle','lamb'],['Ma','ry','had','a','lit','tle','lamb,','its'],['fleece','was','white','as','snow']]};
+const ODE={phrases:[[64,64,65,67],[67,65,64,62],[60,60,62,64],[64,62,62],[64,64,65,67],[67,65,64,62],[60,60,62,64],[62,60,60]]};
+const flat=ps=>ps.reduce((a,b)=>a.concat(b),[]);
+
+const LESSONS=[
+{title:'Hello, piano',mins:3,doneText:'You and the piano are officially introduced.',steps:[
+  {type:'info',title:'Welcome!',btn:"Let's go",text:`<p>This is your first month at the piano, so here's the deal: <b>no grades, no timer, and nothing you play counts against you.</b></p><p>If a note doesn't come out right, I'll help you find it. Every pianist on earth started exactly here.</p><p>Prop your phone on the music stand, close to the keys.</p>`},
+  {type:'mic'},
+  {type:'info',title:'How this works',text:`<p>The keyboard at the bottom of the screen is a little map of your piano. When I hear a note, its key lights up <span class="tag" style="background:#bfe3c9;color:#24593a">green</span>.</p><p>When you could use a hint, I'll make a key glow <span class="tag hint">gold</span>.</p><p>You can tap the on-screen keys any time to hear how a note should sound.</p>`}
+]},
+{title:'The black-key map',mins:3,doneText:'You found the pattern that every pianist uses to get around.',steps:[
+  {type:'info',title:'Twos and threes',kb:{hl:[49,51,61,63],hl2:[54,56,58,66,68,70]},
+   text:`<p>Look closely at your piano. The black keys come in <b>groups of two</b> and <b>groups of three</b>, over and over, all the way up.</p><p>On the screen, the twos are <span class="tag blue">blue</span> and the threes are <span class="tag purple">purple</span>. Find the same pattern on your real piano.</p>`},
+  {type:'play',prompt:'Press <b>any black key in a group of two</b>.',accept:[1,3],hint:[61,63],kb:{hl:[49,51,61,63]},
+   missHint:'Look for the pair: just two black keys side by side.',ok:'That\'s one of the twos.'},
+  {type:'play',prompt:'Now press <b>any black key in a group of three</b>.',accept:[6,8,10],hint:[66,68,70],kb:{hl2:[54,56,58,66,68,70]},
+   missHint:'Look for the black keys that come in a set of three.',ok:'That\'s one of the threes.'},
+  {type:'info',title:'Your map',text:`<p>That pattern is your map. You don't have to memorize 88 keys. Every white key can be found from the twos and threes.</p><p>That's the next lesson.</p>`}
+]},
+{title:'Finding C (and friends)',mins:6,doneText:'You can name every white key on the piano now. All 52 of them.',steps:[
+  {type:'info',title:'Meet C',kb:{hl:[48,60,72],hl2:[49,51,61,63]},
+   text:`<p>White keys are named with letters. The most important one is <b>C</b>.</p><p>C is always the white key <b>just to the left of a group of two black keys</b>.</p>`},
+  {type:'play',prompt:'Play <b>a C</b>, any C at all.',accept:[0],hint:[60],missHint:'Find a group of two black keys, then take the white key just to its left.',ok:'That\'s C!'},
+  {type:'info',title:'Middle C',kb:{hl:[60]},
+   text:`<p>Your piano has lots of Cs. The one nearest the middle, usually right below the brand name, is <b>middle C</b>. It's home base.</p><p>On the screen it has a little dot.</p>`},
+  {type:'play',prompt:'Find <b>middle C</b> and play it. (Any C counts — I\'m not fussy.)',accept:[0],hint:[60],missHint:'Middle C is the C closest to the center of the piano.',ok:'Home base.'},
+  {type:'info',title:'The musical alphabet',kb:{hl:[60,62,64,65,67,69,71]},
+   text:`<p>Music only uses seven letters: <b>A B C D E F G</b>. After G, it starts over at A.</p><p>Starting at C and moving right, the white keys go <b>C D E F G A B</b>, then C again.</p><p>Let's find each one.</p>`},
+  {type:'play',prompt:'<b>D</b> is snuggled between the two black keys. Play a D.',accept:[2],hint:[62],ok:'D!'},
+  {type:'play',prompt:'<b>E</b> is just to the right of the two black keys.',accept:[4],hint:[64],ok:'E!'},
+  {type:'play',prompt:'<b>F</b> is just to the left of the three black keys.',accept:[5],hint:[65],ok:'F!'},
+  {type:'play',prompt:'<b>G</b> is the next white key after F.',accept:[7],hint:[67],ok:'G!'},
+  {type:'play',prompt:'<b>A</b> comes next.',accept:[9],hint:[69],ok:'A!'},
+  {type:'play',prompt:'<b>B</b> is the last white key before C comes around again.',accept:[11],hint:[71],ok:'B — and that\'s the whole alphabet.'}
+]},
+{title:'What\'s a scale?',mins:6,doneText:'You played a scale up and down. That\'s a real pianist thing.',steps:[
+  {type:'info',title:'A ladder of notes',demo:CMAJ,kb:{hl:CMAJ},
+   text:`<p>A <b>scale</b> is a ladder of notes. You climb one key at a time, from a note up to the next note with the same name.</p><p>The most famous is <b>C major</b>: every white key from C up to the next C. Tap <b>Hear it</b>. It's "do re mi fa so la ti do."</p>`},
+  {type:'seq',notes:CMAJ,guide:true,prompt:'Climb the ladder from <b>middle C</b> up to the next C. Any finger is fine today. The glowing key is the next one.',done:'You just played your first scale!'},
+  {type:'info',title:'Whole steps and half steps',kb:{hl2:[64,65,71,72]},
+   text:`<p>Most neighboring white keys have a black key between them. That distance is a <b>whole step</b>.</p><p>But <b>E–F</b> and <b>B–C</b> have no black key between them. Those are <b>half steps</b>, the smallest step on the piano.</p><p>That mix of whole and half steps is what gives a major scale its "do re mi" sound.</p>`},
+  {type:'seq',notes:[72,71,69,67,65,64,62,60],guide:false,prompt:'Now climb back <b>down</b>, from the top C to middle C. Try it without the glowing keys, but turn them on any time.',done:'Down the ladder, safe and sound.'}
+]},
+{title:'Notes on paper',mins:7,doneText:'You\'re reading music. Really!',steps:[
+  {type:'info',title:'The staff',staff:[],
+   text:`<p>Music is written on a <b>staff</b>: five lines with four spaces between them.</p><p>The higher a note sits on the staff, the higher it sounds, which means further <b>right</b> on the piano.</p><p>The curly sign is the <b>treble clef</b>. It means "these notes are around middle C and up," usually for your right hand.</p>`},
+  {type:'info',title:'Middle C on paper',staff:[60],staffNames:true,kb:{hl:[60]},
+   text:`<p><b>Middle C</b> sits just below the staff, on its own short line, called a <i>ledger line</i>.</p>`},
+  {type:'play',prompt:'This is middle C. Play it!',staff:60,showName:true,accept:[0],hint:[60],ok:'Reading and playing at once.'},
+  {type:'play',prompt:'One step up is <b>D</b>, hanging just below the bottom line.',staff:62,showName:true,accept:[2],hint:[62]},
+  {type:'play',prompt:'<b>E</b> sits right on the bottom line.',staff:64,showName:true,accept:[4],hint:[64]},
+  {type:'play',prompt:'<b>F</b> is in the first space.',staff:65,showName:true,accept:[5],hint:[65]},
+  {type:'play',prompt:'<b>G</b> is on the second line.',staff:67,showName:true,accept:[7],hint:[67]},
+  {type:'info',title:'Line, space, line, space',staff:[60,62,64,65,67],staffNames:true,
+   text:`<p>Each step up the piano moves the note one step up the staff: line, space, line, space.</p><p>Now a friendly quiz. I'll show a note <b>without its name</b>. Take all the time you need. If you get stuck, I'll give you hints.</p>`},
+  {type:'quiz',pool:[60,62,64,65,67],n:6}
+]},
+{title:'Your hand on the keys',mins:5,doneText:'Your fingers know C position now. That\'s where your first songs live.',steps:[
+  {type:'info',title:'Finger numbers',kb:{hl:[60,62,64,65,67],fingers:CPOS_KEYS},
+   text:`<p>Pianists number their fingers: <b>thumb = 1</b>, pointer = 2, middle = 3, ring = 4, pinky = 5. It's the same on both hands.</p><p>Put your <b>right thumb on middle C</b> and rest one finger on each white key up to G. This is <b>C position</b>.</p><p>Keep your fingers gently curved, as if you're holding a small ball.</p>`},
+  {type:'seq',notes:[60,62,64,65,67],fingers:true,guide:true,prompt:'Play up, one finger at a time: <b>1 – 2 – 3 – 4 – 5</b>.',done:'All five fingers, present and accounted for.'},
+  {type:'seq',notes:[67,65,64,62,60],fingers:true,guide:true,prompt:'And back down: <b>5 – 4 – 3 – 2 – 1</b>.',done:'Smooth.'},
+  {type:'seq',notes:[60,62,64,62,60],fingers:true,guide:false,prompt:'A little wave: <b>C D E D C</b>, fingers 1 2 3 2 1.',done:'That wave is the start of your first song.'}
+]},
+{title:'First song: Mary Had a Little Lamb',mins:6,doneText:'You played a whole song from start to finish. That\'s a real milestone.',steps:[
+  {type:'info',title:'A real song',demo:flat(MARY.phrases),kb:{fingers:CPOS_KEYS},
+   text:`<p>You already know every note in this song: <b>C, D, E</b> and one <b>G</b>.</p><p>Stay in C position, with your thumb on middle C. The small numbers under the notes are your fingers.</p><p>Don't worry about rhythm yet. Just play the notes in order and I'll wait for you on each one.</p>`},
+  {type:'seq',phrases:MARY.phrases,lyrics:MARY.lyrics,view:'staff',fingers:true,guide:false,demo:true,prompt:'Play along with the notes on the staff.',done:'🎉 You played Mary Had a Little Lamb!'}
+]},
+{title:'Bonus: Ode to Joy',mins:7,doneText:'Beethoven would be proud. You\'ve finished the first set of lessons!',steps:[
+  {type:'info',title:'Beethoven, beginner-sized',demo:flat(ODE.phrases),kb:{fingers:CPOS_KEYS},
+   text:`<p>This famous melody by Beethoven uses all five fingers in C position: <b>C D E F G</b>.</p><p>It moves mostly by steps, from neighbor to neighbor, so let your fingers walk.</p>`},
+  {type:'seq',phrases:ODE.phrases,view:'staff',fingers:true,guide:false,demo:true,prompt:'Take it one note at a time.',done:'🎉 Ode to Joy, played by you.'}
+]}
+];
+LESSONS.forEach(L=>L.steps.push({type:'done'}));
+
+/* ---------- engine ---------- */
+let done=store.get('done',[]);
+let cur={l:0,s:0};
+const screen=$('#screen');
+
+function home(){
+  handler=null; kb.clear(); kb.unhint();
+  $('#hdrBack').style.display='none'; $('#hdrTitle').textContent='First Keys';
+  const next=LESSONS.findIndex((_,i)=>!done.includes(i));
+  screen.innerHTML=`<p class="hero">Piano, from the very first note.</p>
+   <p class="sub">Short lessons. Play on your real piano and I'll listen, or tap the keys below.</p>
+   <div class="lessons">${LESSONS.map((L,i)=>`<button class="lesson ${done.includes(i)?'done':''}" data-i="${i}">
+     <div class="num">${done.includes(i)?'✓':i+1}</div><div><b>${L.title}</b><span>${L.mins} min${i===next?' · up next':''}</span></div></button>`).join('')}</div>`;
+  screen.querySelectorAll('.lesson').forEach(b=>b.onclick=()=>go(+b.dataset.i,0));
+  $('#main').scrollTop=0;
+}
+$('#hdrBack').onclick=home;
+
+function go(l,s){
+  cur={l,s}; handler=null; kb.clear(); kb.unhint();
+  const L=LESSONS[l], st=L.steps[s];
+  $('#hdrBack').style.display=''; $('#hdrTitle').textContent=L.title;
+  if(st.kb){kb.hl(st.kb.hl,'hl');kb.hl(st.kb.hl2,'hl2');if(st.kb.fingers)kb.fingers(st.kb.fingers);}
+  const prog=`<div class="progress">${L.steps.map((_,i)=>`<i class="${i<=s?'d':''}"></i>`).join('')}</div>`;
+  ({info:rInfo,mic:rMic,play:rPlay,seq:rSeq,quiz:rQuiz,done:rDone})[st.type](st,prog);
+  $('#main').scrollTop=0;
+}
+const next=()=>{const L=LESSONS[cur.l]; if(cur.s+1<L.steps.length) go(cur.l,cur.s+1); else home();};
+const backLink=()=>cur.s>0?'<button class="link" id="prev">‹ Back</button>':'';
+function wire(){const p=$('#prev');if(p)p.onclick=()=>go(cur.l,cur.s-1);}
+
+function rInfo(st,prog){
+  let staff='';
+  if(st.staff) staff=`<div class="staffbox">${staffSVG(st.staff.map(m=>({midi:m,name:st.staffNames?nm(m):''})),{minW:260})}</div>`;
+  screen.innerHTML=`<div class="card">${prog}<h2>${st.title||''}</h2><div class="txt">${st.text}</div>${staff}
+    <div class="row">${st.demo?'<button class="ghost" id="demo">▶ Hear it</button>':''}<button class="primary" id="nx">${st.btn||'Next'}</button></div>${backLink()}</div>`;
+  $('#nx').onclick=next; wire();
+  if(st.demo) $('#demo').onclick=()=>playSeq(st.demo);
+}
+
+function rMic(st,prog){
+  const draw=()=>{
+    let body,btns='';
+    if(mic.state==='on'){body='<p>I\'m listening. <b>Play any key</b> on your piano, nice and gentle, to say hello.</p>';}
+    else if(mic.state==='denied'){body=`<p>${micBlockedText()}</p><p><b>Tap any key below</b> to say hello.</p>`;btns='<button class="ghost" id="mOn">Try the mic again</button>';}
+    else if(mic.state==='tap'){body='<p>No problem. <b>Tap any key below</b> to say hello. You can turn on listening later from the button at the top.</p>';}
+    else{body='<p>I can listen to your real piano through your phone\'s microphone. Your phone will ask for permission. The sound stays on your phone.</p>';
+         btns='<button class="primary" id="mOn">🎤 Turn on listening</button><button class="ghost" id="mTap">I\'ll tap the screen</button>';}
+    screen.innerHTML=`<div class="card">${prog}<h2>Can I listen?</h2><div class="txt">${body}</div><div class="fb" id="fb">${mic.state==='on'||mic.state==='tap'||mic.state==='denied'?'Waiting for a note…':''}</div>
+      <div class="row">${btns}<button class="primary" id="nx" style="display:none">Next</button></div>${backLink()}</div>`;
+    const on=$('#mOn'); if(on) on.onclick=async()=>{await startMic(); draw();};
+    const tp=$('#mTap'); if(tp) tp.onclick=()=>{mic.state='tap'; setStatus(); draw();};
+    $('#nx').onclick=next; wire();
+  };
+  draw();
+  handler=ev=>{
+    const fb=$('#fb'); fb.className='fb good';
+    fb.innerHTML=ev.source==='mic'?`I heard <b>${nm(ev.midi)}</b>. We're connected! 🎹`:`That was <b>${nm(ev.midi)}</b>. We're all set! 🎹`;
+    $('#nx').style.display=''; const on=$('#mOn'); if(on&&mic.state==='on') on.remove();
+  };
+}
+
+function dirHint(target,ev){
+  let d=(((target-ev.pc)%12)+12)%12; if(d>6) d-=12;
+  return d>0?'Try a little to the <b>right</b>.':'Try a little to the <b>left</b>.';
+}
+
+function rPlay(st,prog){
+  let misses=0;
+  const staff=st.staff!=null?`<div class="staffbox" style="max-width:240px">${staffSVG([{midi:st.staff,name:st.showName?nm(st.staff):''}],{minW:150})}</div>`:'';
+  screen.innerHTML=`<div class="card">${prog}<p class="prompt">${st.prompt}</p>${staff}
+    <div class="fb" id="fb">${mic.state==='on'?'Listening…':'Play it on your piano, or tap the key below.'}</div>
+    <div class="row"><button class="ghost" id="hear">🔈 How does it sound?</button><button class="link" id="skip" style="display:none">Skip this one</button></div>${backLink()}</div>`;
+  wire();
+  $('#hear').onclick=()=>tone(st.hint[0],0,0.9);
+  $('#skip').onclick=next;
+  handler=ev=>{
+    const fb=$('#fb');
+    if(st.accept.includes(ev.pc)){
+      handler=null; kb.unhint(); fb.className='fb good';
+      fb.innerHTML=`<b>${pick(PRAISE)}</b> ${st.ok||('That\'s '+nm(ev.midi)+'.')}`;
+      setTimeout(()=>{if(cur.l===curL&&cur.s===curS) next();},1400);
+    }else{
+      misses++; fb.className='fb miss';
+      const heard=`That was <b>${nm(ev.midi)}</b>.`;
+      if(misses===1) fb.innerHTML=`${heard} ${st.missHint||(st.accept.length===1?dirHint(st.accept[0],ev):'Almost!')}`;
+      else if(misses===2){fb.innerHTML=`${heard} Close! I lit up the key for you below.`;kb.hl(st.hint,'hint');}
+      else {fb.innerHTML=`No rush at all. Match the glowing key, or skip this one. That's fine too.`;kb.hl(st.hint,'hint');$('#skip').style.display='';}
+    }
+  };
+  const curL=cur.l,curS=cur.s;
+}
+
+function rSeq(st,prog){
+  const phrases=st.phrases||[st.notes], notes=flat(phrases);
+  let idx=0, misses=0, guide=!!st.guide;
+  screen.innerHTML=`<div class="card">${prog}<p class="prompt">${st.prompt}</p><div id="disp"></div>
+    <div class="fb" id="fb">${mic.state==='on'?'Listening… start whenever you\'re ready.':'Play on your piano, or tap the keys below.'}</div>
+    <div class="row" id="ctl">${st.demo?'<button class="ghost" id="demo">▶ Hear it</button>':''}<button class="ghost ${guide?'on':''}" id="guide">💡 Light up the keys</button><button class="link" id="skip" style="display:none">Skip this note</button></div>
+    <div class="row" id="fin" style="display:none"><button class="ghost" id="again">↺ Play it again</button><button class="primary" id="nx">Next</button></div>${backLink()}</div>`;
+  wire();
+  const draw=()=>{
+    const d=$('#disp');
+    if(st.view==='staff'){
+      let g=0; const maxW=62+Math.max(...phrases.map(ph=>ph.length))*42+12;
+      d.innerHTML=phrases.map((ph,pi)=>`<div class="staffbox" data-p="${pi}">${staffSVG(ph.map((m,j)=>{const i=g++;return{midi:m,name:nm(m),finger:st.fingers?CPOS[pcOf(m)]:'',lyric:st.lyrics?st.lyrics[pi][j]:'',cls:i<idx?'n-done':i===idx?'n-cur':''};}),{spacing:42,minW:maxW})}</div>`).join('');
+      let acc=0,pcur=0; phrases.forEach((ph,pi)=>{if(idx>=acc&&idx<acc+ph.length)pcur=pi;acc+=ph.length;});
+      const box=d.querySelector(`[data-p="${pcur}"]`); if(box&&idx>0) box.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }else{
+      d.innerHTML=`<div class="chips">${notes.map((m,i)=>`<div class="chip ${i<idx?'done':i===idx?'cur':''}">${nm(m)}${st.fingers?`<small>${CPOS[pcOf(m)]}</small>`:''}</div>`).join('')}</div>`;
+    }
+    kb.unhint(); if(guide&&idx<notes.length) kb.hl([notes[idx]],'hint');
+  };
+  draw();
+  $('#guide').onclick=e=>{guide=!guide;e.currentTarget.classList.toggle('on',guide);draw();};
+  if(st.demo) $('#demo').onclick=()=>playSeq(notes);
+  const advance=()=>{
+    idx++; misses=0; $('#skip').style.display='none';
+    if(idx>=notes.length){
+      draw(); handler=null; kb.unhint();
+      const fb=$('#fb'); fb.className='fb good'; fb.innerHTML=`<b>${st.done||'Done!'}</b>`;
+      $('#ctl').style.display='none'; $('#fin').style.display='';
+      setTimeout(()=>$('#fin').scrollIntoView({block:'nearest',behavior:'smooth'}),50);
+    }else draw();
+  };
+  $('#skip').onclick=()=>{$('#fb').className='fb';$('#fb').innerHTML='Skipped. On to the next one.';advance();};
+  $('#again').onclick=()=>go(cur.l,cur.s);
+  $('#nx').onclick=next;
+  handler=ev=>{
+    const fb=$('#fb'), target=notes[idx];
+    if(ev.pc===pcOf(target)){
+      fb.className='fb good';
+      fb.innerHTML=idx+1<notes.length?`<b>${nm(target)}</b> ✓ ${idx%3===2?pick(PRAISE):''}`:'';
+      advance();
+    }else{
+      misses++; fb.className='fb miss';
+      const want=`We're looking for <b>${nm(target)}</b>.`;
+      if(misses===1) fb.innerHTML=`That was ${nm(ev.midi)}. ${want} ${dirHint(pcOf(target),ev)}`;
+      else {fb.innerHTML=`${want} I lit it up for you. You're doing fine.`; kb.hl([target],'hint');}
+      if(misses>=3) $('#skip').style.display='';
+    }
+  };
+}
+
+function rQuiz(st,prog){
+  const qs=[]; let last=null;
+  for(let i=0;i<st.n;i++){let m;do{m=pick(st.pool);}while(m===last);qs.push(m);last=m;}
+  let q=0, misses=0;
+  const curL=cur.l,curS=cur.s;
+  const draw=(revealed)=>{
+    const m=qs[q];
+    screen.innerHTML=`<div class="card">${prog}<p class="prompt">What note is this? <b>Play it.</b></p>
+      <div class="chips">${qs.map((_,i)=>`<div class="chip ${i<q?'done':i===q?'cur':''}" style="min-width:28px;padding:4px;font-size:13px">${i<q?'✓':i+1}</div>`).join('')}</div>
+      <div class="staffbox" style="max-width:240px">${staffSVG([{midi:m,name:revealed?nm(m):''}],{minW:150})}</div>
+      <div class="fb" id="fb">Take your time.</div>
+      <div class="row"><button class="link" id="skip" style="display:none">Skip this one</button></div>${backLink()}</div>`;
+    wire(); $('#skip').onclick=nextQ;
+  };
+  const nextQ=()=>{kb.unhint(); q++; misses=0; if(q>=qs.length) next(); else draw(false);};
+  draw(false);
+  handler=ev=>{
+    if(cur.l!==curL||cur.s!==curS) return;
+    const m=qs[q], fb=$('#fb');
+    if(ev.pc===pcOf(m)){
+      fb.className='fb good'; fb.innerHTML=`<b>${pick(PRAISE)}</b> That's ${nm(m)}.`;
+      const qq=q; setTimeout(()=>{if(q===qq&&cur.l===curL&&cur.s===curS) nextQ();},1100);
+    }else{
+      misses++;
+      if(misses===1){fb.className='fb miss';fb.innerHTML=`That was ${nm(ev.midi)}. Count up from middle C: line, space, line… ${dirHint(pcOf(m),ev)}`;}
+      else{draw(true); const f=$('#fb'); f.className='fb miss'; f.innerHTML=`Here's a hint: it's <b>${nm(m)}</b>, glowing below.`; kb.hl([m],'hint'); if(misses>=3) $('#skip').style.display='';}
+    }
+  };
+}
+
+function rDone(st,prog){
+  const L=LESSONS[cur.l];
+  if(!done.includes(cur.l)){done.push(cur.l);store.set('done',done);}
+  const hasNext=cur.l+1<LESSONS.length;
+  screen.innerHTML=`<div class="card">${prog}<div class="big">🌟</div><h2 style="text-align:center">Lesson complete</h2>
+    <div class="txt" style="text-align:center"><p>${L.doneText}</p></div>
+    <div class="row" style="justify-content:center">${hasNext?`<button class="primary" id="nl">Next: ${LESSONS[cur.l+1].title}</button>`:''}<button class="ghost" id="hm">All lessons</button></div></div>`;
+  if(hasNext) $('#nl').onclick=()=>go(cur.l+1,0);
+  $('#hm').onclick=home;
+}
+
+/* ---------- start ---------- */
+kb.build(); setStatus(); home();
+</script>
+</body>
+</html>
