@@ -58,6 +58,28 @@ h2{font-family:Fraunces,Georgia,serif;font-size:24px;line-height:1.2;margin:0 0 
 .n-cur .mark{fill:var(--accent)}
 .lab{font-size:14px;fill:var(--soft);text-anchor:middle;font-family:Inter,sans-serif}
 .lab.nm{font-weight:600;fill:#3b342e}.lab.fg{font-size:12px}
+.nh.hol{fill:var(--card);stroke:#2a2420;stroke-width:1.8}.flag{fill:none;stroke:#2a2420;stroke-width:1.6}
+.n-done .nh.hol,.n-ok .nh.hol{fill:var(--card);stroke:var(--ok)}.n-cur .nh.hol{fill:var(--card);stroke:var(--accent)}
+.n-ok .nh{fill:var(--ok)}.n-ok .stem,.n-ok .flag,.n-done .flag{stroke:var(--ok)}.n-cur .flag{stroke:var(--accent)}
+.n-early .nh,.n-late .nh{fill:#d39a1c}.n-early .stem,.n-late .stem,.n-early .flag,.n-late .flag{stroke:#d39a1c}.n-early .nh.hol,.n-late .nh.hol{fill:var(--card);stroke:#d39a1c}
+.n-miss .nh{fill:#c9c0b4}.n-miss .stem,.n-miss .flag{stroke:#c9c0b4}.n-miss .nh.hol{fill:var(--card);stroke:#c9c0b4}
+.lab.tg{font-size:10px;fill:#a77510;font-weight:600}
+.anna{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px}
+.anna .av{flex:0 0 40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:Fraunces,Georgia,serif;font-weight:700;font-size:15px;border:1.5px solid #e9bfa9}
+.anna .bubble{background:#fff6ea;border:1px solid #efdcc4;border-radius:4px 14px 14px 14px;padding:9px 12px;font-size:16px}
+.anna .bubble p{margin:0 0 6px}.anna .bubble p:last-child{margin:0}
+.who{font-size:12px;color:var(--soft);font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-bottom:2px}
+.prac{background:linear-gradient(160deg,#fff6ea,#fbe7d7);border:1px solid #efcfb6;border-radius:18px;padding:16px;margin-top:16px}
+.prac h3{font-family:Fraunces,Georgia,serif;font-size:21px;margin:0 0 4px}
+.section-h{font-family:Fraunces,Georgia,serif;font-size:19px;margin:22px 0 8px}
+.lesson.dim{opacity:.55}
+.opts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 2px;font-size:14px;color:var(--soft)}
+.opts .seg{margin:0}
+.seg.sm button{padding:6px 10px;font-size:14px}
+.count{font-family:Fraunces,Georgia,serif;font-size:40px;text-align:center;color:var(--accent);min-height:52px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.stats div{background:#f4eee3;border-radius:10px;padding:8px 4px;text-align:center;font-size:12px;color:var(--soft)}
+.stats b{display:block;font-size:22px;color:var(--ink)}
 .n-done .lab.nm{fill:var(--ok)}.n-cur .lab.nm{fill:var(--accent)}
 .lessons{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .lesson{display:flex;align-items:center;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--ink)}
@@ -101,7 +123,7 @@ h2{font-family:Fraunces,Georgia,serif;font-size:24px;line-height:1.2;margin:0 0 
 <body>
 <div id="app">
   <header>
-    <button class="back" id="hdrBack" style="display:none">‹ Lessons</button>
+    <button class="back" id="hdrBack" style="display:none">‹ Home</button>
     <h1 id="hdrTitle">First Keys</h1>
     <button class="pill" id="pill">Mic off</button>
   </header>
@@ -132,19 +154,36 @@ function ac(){
   if(ctx.state==='suspended') ctx.resume();
   return ctx;
 }
-function tone(midi,when=0,dur=0.9){
+let synthLog=[];   // accompaniment notes the mic might overhear
+function tone(midi,when=0,dur=0.9,o={}){
   let c; try{c=ac();}catch(e){return;}
   const t=c.currentTime+when, f=440*Math.pow(2,(midi-69)/12);
   const g=c.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(0.32,t+0.012);
+  g.gain.exponentialRampToValueAtTime(o.vol||0.32,t+0.012);
   g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   const o1=c.createOscillator(); o1.type='triangle'; o1.frequency.value=f;
   const o2=c.createOscillator(); o2.type='sine'; o2.frequency.value=f*2;
   const g2=c.createGain(); g2.gain.value=0.25;
-  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(c.destination);
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(o.dest||c.destination);
   o1.start(t); o2.start(t); o1.stop(t+dur+0.05); o2.stop(t+dur+0.05);
-  muteUntil=Math.max(muteUntil, performance.now()+(when+dur)*1000+250);
+  if(o.accomp){const st=performance.now()+when*1000; synthLog.push({pc:pcOf(midi),start:st,end:st+dur*1000});}
+  if(!o.noMute) muteUntil=Math.max(muteUntil, performance.now()+(when+dur)*1000+250);
+}
+function click(at,accent,dest){
+  let c; try{c=ac();}catch(e){return;}
+  const o=c.createOscillator(), g=c.createGain();
+  o.type='sine'; o.frequency.value=accent?2600:2000;
+  g.gain.setValueAtTime(0.0001,at); g.gain.exponentialRampToValueAtTime(accent?0.3:0.16,at+0.003); g.gain.exponentialRampToValueAtTime(0.0001,at+0.035);
+  o.connect(g); g.connect(dest||c.destination); o.start(at); o.stop(at+0.05);
+}
+function bleedOf(pc,t){
+  const now=performance.now(); synthLog=synthLog.filter(e=>e.end>now-2000);
+  let kind=null;
+  for(const e of synthLog){ if(e.pc!==pc) continue;
+    if(Math.abs(t-e.start)<220) return 'onset';
+    if(t>=e.start&&t<=e.end+120) kind='sustain'; }
+  return kind;
 }
 let demoBusy=false;
 function playSeq(midis,step=0.5){
@@ -216,18 +255,18 @@ function loop(){
   else if(now-heardClear>700) $('#heard').textContent='Listening…';
   const prev=hist.slice(0,-1);
   const onset=prev.length>=2 && rms>gate && rms>Math.min(...prev)*1.5 && now-lastEmit.t>130;
-  if(onset&&!cand) cand={t:now,votes:{}};
+  if(onset&&!cand) cand={t:now-25,votes:{}};
   if(cand){
     if(p!=null) cand.votes[p]=(cand.votes[p]||0)+1;
     if(now-cand.t>100){
       let best=null,bn=0; for(const k in cand.votes) if(cand.votes[k]>bn){bn=cand.votes[k];best=+k;}
-      cand=null;
-      if(best!=null&&bn>=2){emit(best,'mic'); stable={midi:best,n:0};}
+      const c0t=cand.t; cand=null;
+      if(best!=null&&bn>=2){emit(best,'mic',c0t,'onset'); stable={midi:best,n:0,t0:c0t};}
     }
   }else{
     if(p!=null){
-      if(stable.midi===p) stable.n++; else stable={midi:p,n:1};
-      if(stable.n===4&&pcOf(p)!==lastEmit.pc&&now-lastEmit.t>200) emit(p,'mic');
+      if(stable.midi===p) stable.n++; else stable={midi:p,n:1,t0:now};
+      if(stable.n===4&&pcOf(p)!==lastEmit.pc&&now-lastEmit.t>200) emit(p,'mic',stable.t0,'legato');
     }else stable={midi:null,n:0};
   }
 }
@@ -235,10 +274,14 @@ requestAnimationFrame(loop);
 function meter(rms){ $('#meter i').style.width=Math.min(100,Math.sqrt(rms)*260)+'%'; }
 
 let handler=null;
-function emit(midi,source){
-  lastEmit={t:performance.now(),pc:pcOf(midi)};
+function emit(midi,source,t,path){
+  const now=performance.now(); t=t||now;
+  lastEmit={t:now,pc:pcOf(midi)};
+  const bleed=source==='mic'?bleedOf(pcOf(midi),t):null;
+  // the mic overheard my own left-hand playing: ignore it quietly
+  if(bleed==='onset'||(bleed==='sustain'&&path==='legato')) return;
   kb.flash(midi);
-  if(handler) handler({midi,pc:pcOf(midi),source});
+  if(handler) handler({midi,pc:pcOf(midi),source,t,path:path||'tap'});
 }
 
 /* ---------- on-screen keyboard ---------- */
@@ -308,28 +351,37 @@ function micBlockedText(){
 /* ---------- staff drawing ---------- */
 function diat(m){return (Math.floor(m/12)-1)*7+LETTER[pcOf(m)];}
 function staffSVG(items,o={}){
-  const sp=o.spacing||44, x0=62;
-  const hasLyr=items.some(i=>i.lyric), hasFg=items.some(i=>i.finger), hasNm=items.some(i=>i.name);
-  const W=Math.max(o.minW||240,x0+items.length*sp+12);
+  const x0=62;
+  const notes=items.filter(i=>!i.bar);
+  const hasLyr=notes.some(i=>i.lyric), hasFg=notes.some(i=>i.finger), hasNm=notes.some(i=>i.name), hasTag=o.tags;
   const top=24,gap=12,bot=top+4*gap;
-  let y=bot+30; const yNm=hasNm?(y+=0,y):0; if(hasNm) y+=16; const yFg=hasFg?y:0; if(hasFg) y+=15; const yLy=hasLyr?y+2:0; if(hasLyr) y+=18;
+  let y=bot+30; const yNm=y; if(hasNm) y+=16; const yFg=y; if(hasFg) y+=15; const yLy=y+2; if(hasLyr) y+=18; const yTg=y-2; if(hasTag) y+=12;
   const H=Math.max(y,bot+26);
   const ny=pos=>bot-pos*6;
+  let x=x0; const xs=[];
+  items.forEach(it=>{ if(it.bar){xs.push(x+2);x+=12;} else {const w=it.w||o.spacing||44; xs.push(x+w/2-6); x+=w;} });
+  const W=Math.max(o.minW||240,x+12);
   let s=`<svg viewBox="0 0 ${W} ${H}" style="max-width:${W*1.15}px" xmlns="http://www.w3.org/2000/svg">`;
   for(let i=0;i<5;i++) s+=`<line class="staffline" x1="4" x2="${W-4}" y1="${top+i*gap}" y2="${top+i*gap}"/>`;
   s+=`<text class="clef" x="8" y="${bot+11}" font-size="62">𝄞</text>`;
   items.forEach((it,i)=>{
-    const cx=x0+i*sp+sp/2-6, pos=diat(it.midi)-30, cy=ny(pos);
+    const cx=xs[i];
+    if(it.bar){ s+=`<line class="staffline" x1="${cx}" x2="${cx}" y1="${top}" y2="${bot}" style="stroke-width:${it.final?3:1.2}"/>`; return; }
+    const pos=diat(it.midi)-30, cy=ny(pos), d=it.d||1, hol=d>=2, whole=d>=4;
     s+=`<g class="${it.cls||''}">`;
     if(pos<=-2) for(let p=-2;p>=pos;p-=2) s+=`<line class="staffline" x1="${cx-12}" x2="${cx+12}" y1="${ny(p)}" y2="${ny(p)}"/>`;
     if(pos>=10) for(let p=10;p<=pos;p+=2) s+=`<line class="staffline" x1="${cx-12}" x2="${cx+12}" y1="${ny(p)}" y2="${ny(p)}"/>`;
-    s+=`<ellipse class="nh" cx="${cx}" cy="${cy}" rx="7" ry="5.2" transform="rotate(-20 ${cx} ${cy})"/>`;
-    if(pos<4) s+=`<line class="stem" x1="${cx+6.3}" x2="${cx+6.3}" y1="${cy-1}" y2="${cy-34}"/>`;
-    else s+=`<line class="stem" x1="${cx-6.3}" x2="${cx-6.3}" y1="${cy+1}" y2="${cy+34}"/>`;
+    s+=`<ellipse class="nh${hol?' hol':''}" cx="${cx}" cy="${cy}" rx="${whole?8:7}" ry="${whole?5.6:5.2}" transform="rotate(${whole?-12:-20} ${cx} ${cy})"/>`;
+    if(!whole){
+      const up=pos<4, sx=up?cx+6.3:cx-6.3, sy=up?cy-34:cy+34;
+      s+=`<line class="stem" x1="${sx}" x2="${sx}" y1="${up?cy-1:cy+1}" y2="${sy}"/>`;
+      if(d<=0.5) s+=up?`<path class="flag" d="M${sx} ${sy} c0 7 9 9 8 18"/>`:`<path class="flag" d="M${sx} ${sy} c0 -7 9 -9 8 -18"/>`;
+    }
     if(it.cls==='n-cur') s+=`<path class="mark" d="M${cx-5} 4 L${cx+5} 4 L${cx} 11 Z"/>`;
     if(it.name) s+=`<text class="lab nm" x="${cx}" y="${yNm}">${it.name}</text>`;
     if(it.finger) s+=`<text class="lab fg" x="${cx}" y="${yFg}">${it.finger}</text>`;
     if(it.lyric) s+=`<text class="lab" x="${cx}" y="${yLy}">${it.lyric}</text>`;
+    if(it.tag) s+=`<text class="lab tg" x="${cx}" y="${yTg}">${it.tag}</text>`;
     s+='</g>';
   });
   return s+'</svg>';
@@ -423,19 +475,42 @@ let cur={l:0,s:0};
 const screen=$('#screen');
 
 function home(){
-  handler=null; kb.clear(); kb.unhint();
+  stopRun(); handler=null; kb.clear(); kb.unhint(); $('#kb').classList.remove('hide-labels');
   $('#hdrBack').style.display='none'; $('#hdrTitle').textContent='First Keys';
   const next=LESSONS.findIndex((_,i)=>!done.includes(i));
-  screen.innerHTML=`<p class="hero">Piano, from the very first note.</p>
-   <p class="sub">Short lessons. Play on your real piano and I'll listen, or tap the keys below.</p>
+  const st=streakInfo(), cur=currentEx();
+  const exState=store.get('ex',{});
+  screen.innerHTML=`
+   <div class="prac">
+     ${say(st.line)}
+     <h3>Daily practice</h3>
+     <p class="sub" style="margin-bottom:10px">About 5 minutes: find the keys, read some notes, then Carl's No. ${cur.no}.</p>
+     <button class="primary" id="daily">${st.today?'Practice again':'Begin today\'s practice'}</button>
+   </div>
+   <div class="section-h">Carl's exercises <span style="font-size:14px;color:var(--soft);font-family:Inter">Op. 599</span></div>
+   <div class="lessons">${EX.map(e=>{
+     if(e.skip) return `<div class="lesson dim"><div class="num">${e.no}</div><div><b>No. ${e.no}</b><span>Two notes at once. Saved for when my ears improve.</span></div></div>`;
+     const x=exState[e.no]||{}; const star=x.best>=0.8;
+     return `<button class="lesson ${star?'done':''}" data-ex="${e.no}"><div class="num">${star?'★':x.learned?'✓':e.no}</div><div><b>No. ${e.no}</b><span>${posLabel(e)} · ${e.total/4} bars${x.best!=null?` · best ${Math.round(x.best*100)}% in time`:''}</span></div></button>`;}).join('')}</div>
+   <div class="section-h">Drills</div>
+   <div class="lessons">
+     <button class="lesson" id="dKeys"><div class="num">🔍</div><div><b>Find the key</b><span>Letters to keys, no labels</span></div></button>
+     <button class="lesson" id="dCards"><div class="num">♪</div><div><b>Knowledge of the notes</b><span>${store.get('unlocked',5)} notes so far</span></div></button>
+   </div>
+   <div class="section-h">First lessons</div>
    <div class="lessons">${LESSONS.map((L,i)=>`<button class="lesson ${done.includes(i)?'done':''}" data-i="${i}">
      <div class="num">${done.includes(i)?'✓':i+1}</div><div><b>${L.title}</b><span>${L.mins} min${i===next?' · up next':''}</span></div></button>`).join('')}</div>`;
-  screen.querySelectorAll('.lesson').forEach(b=>b.onclick=()=>go(+b.dataset.i,0));
+  screen.querySelectorAll('.lesson[data-i]').forEach(b=>b.onclick=()=>go(+b.dataset.i,0));
+  screen.querySelectorAll('.lesson[data-ex]').forEach(b=>b.onclick=()=>openEx(+b.dataset.ex,{}));
+  $('#daily').onclick=startDaily;
+  $('#dKeys').onclick=()=>keyDrill(8,null);
+  $('#dCards').onclick=()=>cardDrill(10,null);
   $('#main').scrollTop=0;
 }
 $('#hdrBack').onclick=home;
 
 function go(l,s){
+  stopRun(); $('#kb').classList.remove('hide-labels');
   cur={l,s}; handler=null; kb.clear(); kb.unhint();
   const L=LESSONS[l], st=L.steps[s];
   $('#hdrBack').style.display=''; $('#hdrTitle').textContent=L.title;
@@ -600,6 +675,289 @@ function rDone(st,prog){
     <div class="row" style="justify-content:center">${hasNext?`<button class="primary" id="nl">Next: ${LESSONS[cur.l+1].title}</button>`:''}<button class="ghost" id="hm">All lessons</button></div></div>`;
   if(hasNext) $('#nl').onclick=()=>go(cur.l+1,0);
   $('#hm').onclick=home;
+}
+
+
+/* ================= Fräulein Czerny's practice room ================= */
+const EX=[{"no":1,"rh":[[0.0,4.0,60,1],[4.0,2.0,62,2],[6.0,2.0,64,3],[8.0,4.0,60,1],[12.0,2.0,62,2],[14.0,2.0,64,3],[16.0,2.0,60,1],[18.0,2.0,64,3],[20.0,2.0,67,5],[22.0,2.0,65,4],[24.0,2.0,64,3],[26.0,2.0,62,2],[28.0,4.0,60,1],[32.0,2.0,62,2],[34.0,2.0,64,3],[36.0,2.0,65,4],[38.0,2.0,62,2],[40.0,2.0,64,3],[42.0,2.0,65,4],[44.0,2.0,67,5],[46.0,2.0,64,3],[48.0,2.0,62,2],[50.0,2.0,64,3],[52.0,2.0,65,4],[54.0,2.0,62,2],[56.0,2.0,60,1],[58.0,2.0,64,3],[60.0,4.0,60,1]],"lh":[[0.0,2.0,[48]],[2.0,2.0,[52]],[4.0,4.0,[55]],[8.0,2.0,[48]],[10.0,2.0,[52]],[12.0,4.0,[55]],[16.0,4.0,[48]],[20.0,2.0,[52]],[22.0,2.0,[53]],[24.0,2.0,[55]],[26.0,2.0,[53]],[28.0,4.0,[52]],[32.0,4.0,[55]],[36.0,4.0,[55]],[40.0,2.0,[48]],[42.0,2.0,[50]],[44.0,2.0,[52]],[46.0,2.0,[48]],[48.0,4.0,[55]],[52.0,4.0,[55]],[56.0,2.0,[52]],[58.0,2.0,[55]],[60.0,4.0,[48]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":-12},{"no":2,"rh":[[0.0,2.0,67,2],[2.0,2.0,72,5],[4.0,2.0,71,4],[6.0,2.0,69,3],[8.0,2.0,67,2],[10.0,2.0,67,2],[12.0,4.0,67,2],[16.0,4.0,71,4],[20.0,4.0,71,4],[24.0,2.0,72,5],[26.0,2.0,67,2],[28.0,4.0,67,2],[32.0,2.0,67,2],[34.0,2.0,72,5],[36.0,2.0,71,4],[38.0,2.0,69,3],[40.0,2.0,67,2],[42.0,2.0,67,2],[44.0,4.0,67,2],[48.0,2.0,71,4],[50.0,2.0,71,4],[52.0,2.0,71,4],[54.0,2.0,71,4],[56.0,2.0,72,5],[58.0,2.0,72,5],[60.0,4.0,72,5],[64.0,2.0,71,3],[66.0,2.0,72,4],[68.0,2.0,74,5],[70.0,2.0,71,3],[72.0,2.0,72,4],[74.0,2.0,67,1],[76.0,4.0,67,1],[80.0,2.0,71,3],[82.0,2.0,72,4],[84.0,2.0,74,5],[86.0,2.0,71,3],[88.0,2.0,72,4],[90.0,2.0,67,1],[92.0,4.0,67,1],[96.0,2.0,67,1],[98.0,2.0,72,4],[100.0,2.0,71,3],[102.0,2.0,69,2],[104.0,2.0,67,1],[106.0,2.0,67,1],[108.0,4.0,67,1],[112.0,4.0,71,3],[116.0,4.0,71,3],[120.0,2.0,72,4],[122.0,2.0,72,4],[124.0,4.0,72,4]],"lh":[[0.0,2.0,[64]],[2.0,2.0,[60]],[4.0,2.0,[65]],[6.0,2.0,[60]],[8.0,2.0,[64]],[10.0,2.0,[60]],[12.0,2.0,[64]],[14.0,2.0,[60]],[16.0,2.0,[62]],[18.0,2.0,[67]],[20.0,2.0,[65]],[22.0,2.0,[62]],[24.0,2.0,[64]],[26.0,2.0,[67]],[28.0,2.0,[64]],[30.0,2.0,[60]],[32.0,2.0,[64]],[34.0,2.0,[60]],[36.0,2.0,[65]],[38.0,2.0,[60]],[40.0,2.0,[64]],[42.0,2.0,[60]],[44.0,2.0,[64]],[46.0,2.0,[60]],[48.0,2.0,[62]],[50.0,2.0,[67]],[52.0,2.0,[65]],[54.0,2.0,[62]],[56.0,2.0,[60]],[58.0,2.0,[64]],[60.0,4.0,[60]],[64.0,4.0,[67]],[68.0,4.0,[67]],[72.0,2.0,[60]],[74.0,2.0,[67]],[76.0,2.0,[64]],[78.0,2.0,[60]],[80.0,4.0,[67]],[84.0,2.0,[67]],[86.0,2.0,[67]],[88.0,2.0,[60]],[90.0,2.0,[64]],[92.0,2.0,[67]],[94.0,2.0,[65]],[96.0,2.0,[64]],[98.0,2.0,[60]],[100.0,2.0,[65]],[102.0,2.0,[60]],[104.0,2.0,[64]],[106.0,2.0,[60]],[108.0,2.0,[64]],[110.0,2.0,[60]],[112.0,2.0,[62]],[114.0,2.0,[67]],[116.0,2.0,[65]],[118.0,2.0,[62]],[120.0,2.0,[60]],[122.0,2.0,[62]],[124.0,4.0,[60]]],"total":128.0,"sections":[0.0,64.0,128.0],"shift":-12},{"no":3,"rh":[[0.0,2.0,67,1],[2.0,2.0,71,3],[4.0,2.0,74,5],[6.0,2.0,74,5],[8.0,4.0,74,5],[12.0,4.0,71,3],[16.0,2.0,69,2],[18.0,2.0,71,3],[20.0,2.0,72,4],[22.0,2.0,69,2],[24.0,2.0,71,3],[26.0,2.0,74,5],[28.0,4.0,67,1],[32.0,4.0,69,2],[36.0,2.0,67,1],[38.0,2.0,69,2],[40.0,2.0,69,3],[42.0,2.0,72,4],[44.0,4.0,74,5],[48.0,2.0,74,5],[50.0,2.0,71,3],[52.0,2.0,72,4],[54.0,2.0,69,2],[56.0,2.0,71,3],[58.0,2.0,67,1],[60.0,4.0,67,1]],"lh":[[0.0,4.0,[55]],[4.0,4.0,[55]],[8.0,2.0,[55]],[10.0,2.0,[59]],[12.0,2.0,[62]],[14.0,2.0,[62]],[16.0,4.0,[62]],[20.0,4.0,[62]],[24.0,2.0,[55]],[26.0,2.0,[59]],[28.0,4.0,[55]],[32.0,2.0,[62]],[34.0,2.0,[60]],[36.0,2.0,[59]],[38.0,2.0,[57]],[40.0,2.0,[55]],[42.0,2.0,[57]],[44.0,2.0,[59]],[46.0,2.0,[55]],[48.0,4.0,[62]],[52.0,4.0,[62]],[56.0,2.0,[55]],[58.0,2.0,[59]],[60.0,4.0,[55]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":0},{"no":4,"rh":[[0.0,2.0,60,1],[2.0,2.0,62,2],[4.0,4.0,64,3],[8.0,2.0,60,1],[10.0,2.0,62,2],[12.0,4.0,64,3],[16.0,2.0,65,2],[18.0,2.0,65,2],[20.0,2.0,67,5],[22.0,2.0,65,4],[24.0,4.0,64,3],[28.0,4.0,60,1],[32.0,2.0,62,2],[34.0,2.0,62,2],[36.0,2.0,64,3],[38.0,2.0,65,4],[40.0,2.0,67,5],[42.0,2.0,64,3],[44.0,4.0,60,1],[48.0,2.0,62,2],[50.0,2.0,62,2],[52.0,2.0,65,4],[54.0,2.0,62,2],[56.0,2.0,60,1],[58.0,2.0,64,3],[60.0,4.0,60,1]],"lh":[[0.0,2.0,[52]],[2.0,2.0,[55]],[4.0,2.0,[48]],[6.0,2.0,[55]],[8.0,2.0,[52]],[10.0,2.0,[55]],[12.0,2.0,[48]],[14.0,2.0,[55]],[16.0,2.0,[50]],[18.0,2.0,[55]],[20.0,2.0,[50]],[22.0,2.0,[55]],[24.0,2.0,[48]],[26.0,2.0,[55]],[28.0,4.0,[52]],[32.0,2.0,[55]],[34.0,2.0,[53]],[36.0,2.0,[52]],[38.0,2.0,[50]],[40.0,2.0,[48]],[42.0,2.0,[55]],[44.0,2.0,[52]],[46.0,2.0,[48]],[48.0,4.0,[55]],[52.0,4.0,[55]],[56.0,4.0,[48]],[60.0,4.0,[48]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":-24},{"no":5,"rh":[[0.0,1.0,67,1],[1.0,1.0,72,2],[2.0,1.0,76,4],[3.0,1.0,79,5],[4.0,1.0,77,4],[5.0,1.0,74,2],[6.0,1.0,77,4],[7.0,1.0,74,2],[8.0,1.0,71,1],[9.0,1.0,71,1],[10.0,1.0,74,3],[11.0,1.0,77,5],[12.0,1.0,76,4],[13.0,1.0,72,2],[14.0,1.0,76,4],[15.0,1.0,72,2],[16.0,1.0,67,1],[17.0,1.0,72,2],[18.0,1.0,76,4],[19.0,1.0,79,5],[20.0,1.0,77,4],[21.0,1.0,74,2],[22.0,1.0,77,4],[23.0,1.0,74,2],[24.0,1.0,71,1],[25.0,1.0,74,3],[26.0,1.0,71,1],[27.0,1.0,74,3],[28.0,1.0,72,2],[29.0,1.0,76,4],[30.0,2.0,72,2],[32.0,1.0,72,1],[33.0,1.0,77,2],[34.0,1.0,81,4],[35.0,1.0,84,5],[36.0,1.0,84,5],[37.0,1.0,79,3],[38.0,1.0,76,2],[39.0,1.0,72,1],[40.0,1.0,72,1],[41.0,1.0,77,2],[42.0,1.0,81,4],[43.0,1.0,84,5],[44.0,1.0,84,5],[45.0,1.0,79,3],[46.0,1.0,76,2],[47.0,1.0,72,1],[48.0,1.0,79,2],[49.0,1.0,84,5],[50.0,1.0,83,4],[51.0,1.0,81,3],[52.0,1.0,79,2],[53.0,1.0,76,1],[54.0,1.0,79,2],[55.0,1.0,76,1],[56.0,1.0,77,4],[57.0,1.0,74,2],[58.0,1.0,77,4],[59.0,1.0,74,2],[60.0,1.0,72,1],[61.0,1.0,76,3],[62.0,2.0,72,1]],"lh":[[0.0,2.0,[60]],[2.0,2.0,[60]],[4.0,2.0,[55]],[6.0,2.0,[55]],[8.0,2.0,[55]],[10.0,2.0,[55]],[12.0,2.0,[60]],[14.0,2.0,[60]],[16.0,2.0,[60]],[18.0,2.0,[60]],[20.0,2.0,[67]],[22.0,2.0,[67]],[24.0,2.0,[67]],[26.0,2.0,[67]],[28.0,4.0,[60]],[32.0,2.0,[65]],[34.0,2.0,[65]],[36.0,2.0,[64]],[38.0,2.0,[60]],[40.0,2.0,[65]],[42.0,2.0,[65]],[44.0,2.0,[64]],[46.0,2.0,[60]],[48.0,2.0,[64]],[50.0,2.0,[65]],[52.0,2.0,[64]],[54.0,2.0,[60]],[56.0,2.0,[67]],[58.0,2.0,[67]],[60.0,4.0,[60]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":0},{"no":6,"rh":[[0.0,1.0,67,1],[1.0,1.0,71,2],[2.0,1.0,74,4],[3.0,1.0,79,5],[4.0,4.0,74,2],[8.0,1.0,72,1],[9.0,1.0,81,5],[10.0,1.0,72,1],[11.0,1.0,81,5],[12.0,1.0,71,1],[13.0,1.0,79,5],[14.0,1.0,71,1],[15.0,1.0,79,5],[16.0,1.0,74,1],[17.0,1.0,79,2],[18.0,1.0,83,4],[19.0,1.0,86,5],[20.0,4.0,83,3],[24.0,1.0,84,4],[25.0,1.0,81,2],[26.0,1.0,84,4],[27.0,1.0,81,2],[28.0,1.0,79,1],[29.0,1.0,79,1],[30.0,2.0,79,1],[32.0,2.0,81,2],[34.0,1.0,79,1],[35.0,1.0,81,2],[36.0,4.0,83,3],[40.0,2.0,81,2],[42.0,1.0,79,1],[43.0,1.0,81,2],[44.0,4.0,83,3],[48.0,1.0,86,5],[49.0,1.0,83,3],[50.0,1.0,86,5],[51.0,1.0,83,3],[52.0,1.0,79,1],[53.0,1.0,83,3],[54.0,1.0,79,1],[55.0,1.0,83,3],[56.0,1.0,84,4],[57.0,1.0,81,2],[58.0,1.0,84,4],[59.0,1.0,81,2],[60.0,1.0,79,1],[61.0,1.0,79,1],[62.0,2.0,79,1]],"lh":[[0.0,4.0,[55]],[4.0,1.0,[55]],[5.0,1.0,[57]],[6.0,1.0,[59]],[7.0,1.0,[60]],[8.0,2.0,[62]],[10.0,2.0,[62]],[12.0,2.0,[55]],[14.0,2.0,[55]],[16.0,4.0,[55]],[20.0,1.0,[55]],[21.0,1.0,[62]],[22.0,1.0,[59]],[23.0,1.0,[55]],[24.0,2.0,[62]],[26.0,2.0,[62]],[28.0,4.0,[55]],[32.0,1.0,[62]],[33.0,1.0,[60]],[34.0,1.0,[59]],[35.0,1.0,[57]],[36.0,1.0,[55]],[37.0,1.0,[62]],[38.0,1.0,[59]],[39.0,1.0,[55]],[40.0,1.0,[62]],[41.0,1.0,[60]],[42.0,1.0,[59]],[43.0,1.0,[57]],[44.0,1.0,[55]],[45.0,1.0,[59]],[46.0,1.0,[62]],[47.0,1.0,[59]],[48.0,4.0,[55]],[52.0,4.0,[55]],[56.0,2.0,[62]],[58.0,2.0,[62]],[60.0,4.0,[55]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":0},{"no":7,"rh":[[0.0,1.0,60,1],[1.0,1.0,62,2],[2.0,1.0,64,3],[3.0,1.0,65,4],[4.0,2.0,67,5],[6.0,2.0,67,5],[8.0,1.0,65,4],[9.0,1.0,62,2],[10.0,1.0,65,4],[11.0,1.0,62,2],[12.0,2.0,60,1],[14.0,2.0,60,1],[16.0,1.0,65,4],[17.0,1.0,64,3],[18.0,1.0,62,2],[19.0,1.0,67,5],[20.0,2.0,64,3],[22.0,2.0,60,1],[24.0,1.0,65,4],[25.0,1.0,64,3],[26.0,1.0,62,2],[27.0,1.0,67,5],[28.0,4.0,60,1]],"lh":[[0.0,4.0,[48]],[4.0,2.0,[48]],[6.0,2.0,[52]],[8.0,2.0,[55]],[10.0,2.0,[55]],[12.0,4.0,[48]],[16.0,2.0,[55]],[18.0,2.0,[55]],[20.0,2.0,[48]],[22.0,2.0,[52]],[24.0,2.0,[55]],[26.0,2.0,[55]],[28.0,2.0,[48]],[30.0,2.0,[48]]],"total":32.0,"sections":[0.0,16.0,32.0],"shift":-24},{"no":8,"skip":true},{"no":9,"rh":[[0.0,1.0,72,1],[1.0,1.0,76,3],[2.0,1.0,79,5],[3.0,1.0,76,3],[4.0,1.0,72,1],[5.0,1.0,76,3],[6.0,1.0,79,5],[7.0,1.0,76,3],[8.0,1.0,77,4],[9.0,1.0,74,2],[10.0,1.0,77,4],[11.0,1.0,74,2],[12.0,2.0,76,3],[14.0,2.0,72,1],[16.0,1.0,74,2],[17.0,1.0,74,2],[18.0,1.0,74,2],[19.0,1.0,74,2],[20.0,1.0,76,3],[21.0,1.0,72,1],[22.0,2.0,79,5],[24.0,1.0,79,5],[25.0,1.0,77,4],[26.0,1.0,74,2],[27.0,1.0,71,1],[28.0,1.0,72,2],[29.0,1.0,72,2],[30.0,2.0,72,2]],"lh":[[0.0,4.0,[60,64,67]],[4.0,4.0,[60,64,67]],[8.0,4.0,[59,62,67]],[12.0,4.0,[60,64,67]],[16.0,4.0,[55,59,62]],[20.0,4.0,[55,60,64]],[24.0,4.0,[55,62,65]],[28.0,4.0,[60,64,67]]],"total":32.0,"sections":[0.0,16.0,32.0],"shift":0},{"no":10,"skip":true},{"no":11,"rh":[[0.0,1.0,60,1],[1.0,1.0,64,3],[2.0,1.0,60,1],[3.0,1.0,64,3],[4.0,1.0,67,5],[5.0,1.0,64,3],[6.0,1.0,60,1],[7.0,1.0,64,3],[8.0,1.0,62,2],[9.0,1.0,67,5],[10.0,1.0,65,4],[11.0,1.0,62,2],[12.0,1.0,64,3],[13.0,1.0,60,1],[14.0,1.0,67,5],[15.0,1.0,64,3],[16.0,1.0,60,1],[17.0,1.0,64,3],[18.0,1.0,60,1],[19.0,1.0,64,3],[20.0,1.0,67,5],[21.0,1.0,62,2],[22.0,1.0,60,1],[23.0,1.0,62,2],[24.0,1.0,62,2],[25.0,1.0,67,5],[26.0,1.0,65,4],[27.0,1.0,62,2],[28.0,1.0,60,1],[29.0,1.0,64,3],[30.0,2.0,60,1],[32.0,1.0,62,2],[33.0,1.0,64,3],[34.0,1.0,65,4],[35.0,1.0,62,2],[36.0,1.0,64,3],[37.0,1.0,67,5],[38.0,1.0,64,3],[39.0,1.0,60,1],[40.0,1.0,62,2],[41.0,1.0,64,3],[42.0,1.0,65,4],[43.0,1.0,62,2],[44.0,1.0,64,3],[45.0,1.0,67,5],[46.0,1.0,65,4],[47.0,1.0,62,2],[48.0,1.0,60,1],[49.0,1.0,64,3],[50.0,1.0,60,1],[51.0,1.0,64,3],[52.0,1.0,67,5],[53.0,1.0,64,3],[54.0,1.0,60,1],[55.0,1.0,64,3],[56.0,1.0,62,2],[57.0,1.0,67,5],[58.0,1.0,65,4],[59.0,1.0,62,2],[60.0,1.0,60,1],[61.0,1.0,64,3],[62.0,2.0,60,1]],"lh":[[0.0,4.0,[48,52,55]],[4.0,4.0,[48,52,55]],[8.0,4.0,[47,50,55]],[12.0,4.0,[48,52,55]],[16.0,4.0,[48,52,55]],[20.0,4.0,[48,52,55]],[24.0,4.0,[47,53,55]],[28.0,4.0,[48,52,55]],[32.0,4.0,[47,50,55]],[36.0,4.0,[48,52,55]],[40.0,4.0,[47,50,55]],[44.0,2.0,[48,52,55]],[46.0,2.0,[47,50,55]],[48.0,4.0,[48,52,55]],[52.0,4.0,[48,52,55]],[56.0,2.0,[47,53,55]],[58.0,2.0,[47,53,55]],[60.0,4.0,[48,52,55]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":-12},{"no":12,"rh":[[0.0,0.5,60,1],[0.5,0.5,62,2],[1.0,0.5,64,3],[1.5,0.5,65,4],[2.0,1.0,67,5],[3.0,1.0,67,5],[4.0,0.5,67,5],[4.5,0.5,65,4],[5.0,0.5,64,3],[5.5,0.5,62,2],[6.0,1.0,60,1],[7.0,1.0,64,3],[8.0,0.5,62,2],[8.5,0.5,64,3],[9.0,0.5,65,4],[9.5,0.5,62,2],[10.0,1.0,67,5],[11.0,1.0,65,4],[12.0,0.5,64,3],[12.5,0.5,65,4],[13.0,0.5,67,5],[13.5,0.5,64,3],[14.0,2.0,60,1],[16.0,0.5,60,1],[16.5,0.5,62,2],[17.0,0.5,64,3],[17.5,0.5,62,2],[18.0,0.5,60,1],[18.5,0.5,62,2],[19.0,0.5,64,3],[19.5,0.5,65,4],[20.0,0.5,67,5],[20.5,0.5,65,4],[21.0,0.5,64,3],[21.5,0.5,62,2],[22.0,1.0,60,1],[23.0,1.0,64,3],[24.0,0.5,62,2],[24.5,0.5,64,3],[25.0,0.5,65,4],[25.5,0.5,62,2],[26.0,0.5,67,5],[26.5,0.5,65,4],[27.0,0.5,64,3],[27.5,0.5,62,2],[28.0,0.5,62,2],[28.5,0.5,64,3],[29.0,0.5,67,5],[29.5,0.5,64,3],[30.0,2.0,60,1],[32.0,0.5,62,2],[32.5,0.5,64,3],[33.0,0.5,65,4],[33.5,0.5,64,3],[34.0,0.5,67,5],[34.5,0.5,65,4],[35.0,0.5,64,3],[35.5,0.5,62,2],[36.0,0.5,64,3],[36.5,0.5,65,4],[37.0,0.5,67,5],[37.5,0.5,64,3],[38.0,1.0,60,1],[39.0,1.0,60,1],[40.0,0.5,62,2],[40.5,0.5,64,3],[41.0,0.5,65,4],[41.5,0.5,62,2],[42.0,0.5,67,5],[42.5,0.5,65,4],[43.0,0.5,64,3],[43.5,0.5,62,2],[44.0,0.5,64,3],[44.5,0.5,65,4],[45.0,0.5,67,5],[45.5,0.5,64,3],[46.0,1.0,60,1],[47.0,1.0,60,1],[48.0,0.5,60,1],[48.5,0.5,62,2],[49.0,0.5,64,3],[49.5,0.5,65,4],[50.0,0.5,67,5],[50.5,0.5,67,5],[51.0,0.5,67,5],[51.5,0.5,67,5],[52.0,0.5,67,5],[52.5,0.5,65,4],[53.0,0.5,64,3],[53.5,0.5,62,2],[54.0,0.5,60,1],[54.5,0.5,62,2],[55.0,0.5,64,3],[55.5,0.5,60,1],[56.0,0.5,62,2],[56.5,0.5,64,3],[57.0,0.5,65,4],[57.5,0.5,62,2],[58.0,0.5,67,5],[58.5,0.5,65,4],[59.0,0.5,64,3],[59.5,0.5,62,2],[60.0,0.5,60,1],[60.5,0.5,64,3],[61.0,0.5,67,5],[61.5,0.5,64,3],[62.0,2.0,60,1]],"lh":[[0.0,4.0,[48,52,55]],[4.0,4.0,[48,52,55]],[8.0,4.0,[47,50,55]],[12.0,4.0,[48,52,55]],[16.0,4.0,[48,52,55]],[20.0,4.0,[48,52,55]],[24.0,4.0,[47,53,55]],[28.0,4.0,[48,52,55]],[32.0,4.0,[47,50,55]],[36.0,4.0,[48,52,55]],[40.0,4.0,[47,50,55]],[44.0,4.0,[48,52,55]],[48.0,4.0,[48,52,55]],[52.0,4.0,[48,52,55]],[56.0,2.0,[47,53,55]],[58.0,2.0,[47,53,55]],[60.0,4.0,[48,52,55]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":-12},{"no":13,"rh":[[0.0,0.5,60,1],[0.5,0.5,64,3],[1.0,0.5,60,1],[1.5,0.5,64,3],[2.0,2.0,67,5],[4.0,0.5,67,5],[4.5,0.5,64,3],[5.0,0.5,67,5],[5.5,0.5,64,3],[6.0,2.0,60,1],[8.0,0.5,62,2],[8.5,0.5,67,5],[9.0,0.5,65,4],[9.5,0.5,67,5],[10.0,0.5,64,3],[10.5,0.5,67,5],[11.0,0.5,62,2],[11.5,0.5,67,5],[12.0,0.5,64,3],[12.5,0.5,65,4],[13.0,0.5,67,5],[13.5,0.5,64,3],[14.0,0.5,60,1],[14.5,0.5,62,2],[15.0,0.5,60,1],[15.5,0.5,62,2],[16.0,0.5,64,3],[16.5,0.5,60,1],[17.0,0.5,64,3],[17.5,0.5,60,1],[18.0,1.0,67,5],[19.0,1.0,67,5],[20.0,0.5,64,3],[20.5,0.5,67,5],[21.0,0.5,64,3],[21.5,0.5,67,5],[22.0,1.0,60,1],[23.0,1.0,60,1],[24.0,0.5,62,2],[24.5,0.5,67,5],[25.0,0.5,67,5],[25.5,0.5,65,4],[26.0,0.5,65,4],[26.5,0.5,64,3],[27.0,0.5,64,3],[27.5,0.5,62,2],[28.0,0.5,60,1],[28.5,0.5,64,3],[29.0,0.5,60,1],[29.5,0.5,64,3],[30.0,2.0,60,1],[32.0,0.5,62,2],[32.5,0.5,67,5],[33.0,0.5,67,5],[33.5,0.5,67,5],[34.0,0.5,67,5],[34.5,0.5,65,4],[35.0,0.5,64,3],[35.5,0.5,62,2],[36.0,0.5,64,3],[36.5,0.5,67,5],[37.0,0.5,60,1],[37.5,0.5,60,2],[38.0,0.5,60,1],[38.5,0.5,62,2],[39.0,0.5,64,3],[39.5,0.5,60,1],[40.0,0.5,62,2],[40.5,0.5,67,5],[41.0,0.5,67,4],[41.5,0.5,67,3],[42.0,0.5,67,5],[42.5,0.5,65,4],[43.0,0.5,64,3],[43.5,0.5,62,2],[44.0,0.5,64,3],[44.5,0.5,67,5],[45.0,0.5,64,3],[45.5,0.5,67,5],[46.0,2.0,60,1],[48.0,0.5,60,1],[48.5,0.5,62,2],[49.0,0.5,60,1],[49.5,0.5,62,2],[50.0,0.5,64,3],[50.5,0.5,65,4],[51.0,0.5,64,3],[51.5,0.5,65,4],[52.0,0.5,67,5],[52.5,0.5,67,4],[53.0,0.5,67,3],[53.5,0.5,67,2],[54.0,0.5,64,1],[54.5,0.5,67,4],[55.0,0.5,64,2],[55.5,0.5,60,1],[56.0,0.5,67,5],[56.5,0.5,67,4],[57.0,0.5,67,3],[57.5,0.5,67,2],[58.0,0.5,65,1],[58.5,0.5,67,4],[59.0,0.5,65,3],[59.5,0.5,62,1],[60.0,0.5,60,2],[60.5,0.5,64,4],[61.0,0.5,60,2],[61.5,0.5,64,4],[62.0,2.0,60,1]],"lh":[[0.0,4.0,[48]],[1.0,1.0,[52,55]],[2.0,1.0,[52,55]],[3.0,1.0,[52,55]],[4.0,4.0,[48]],[5.0,1.0,[52,55]],[6.0,1.0,[52,55]],[7.0,1.0,[52,55]],[8.0,4.0,[47]],[9.0,1.0,[50,55]],[10.0,1.0,[50,55]],[11.0,1.0,[50,55]],[12.0,4.0,[48]],[13.0,1.0,[52,55]],[14.0,1.0,[52,55]],[15.0,1.0,[52,55]],[16.0,4.0,[48]],[17.0,1.0,[52,55]],[18.0,1.0,[52,55]],[19.0,1.0,[52,55]],[20.0,4.0,[48]],[21.0,1.0,[52,55]],[22.0,1.0,[52,55]],[23.0,1.0,[52,55]],[24.0,4.0,[47]],[25.0,1.0,[53,55]],[26.0,1.0,[53,55]],[27.0,1.0,[53,55]],[28.0,4.0,[48]],[29.0,1.0,[52,55]],[30.0,1.0,[52,55]],[31.0,1.0,[52,55]],[32.0,4.0,[47]],[33.0,1.0,[50,55]],[34.0,1.0,[50,55]],[35.0,1.0,[50,55]],[36.0,4.0,[48]],[37.0,1.0,[52,55]],[38.0,1.0,[52,55]],[39.0,1.0,[52,55]],[40.0,4.0,[47]],[41.0,1.0,[50,55]],[42.0,1.0,[50,55]],[43.0,1.0,[50,55]],[44.0,4.0,[48]],[45.0,1.0,[52,55]],[46.0,1.0,[52,55]],[47.0,1.0,[52,55]],[48.0,4.0,[48]],[49.0,1.0,[52,55]],[50.0,1.0,[52,55]],[51.0,1.0,[52,55]],[52.0,4.0,[48]],[53.0,1.0,[52,55]],[54.0,1.0,[52,55]],[55.0,1.0,[52,55]],[56.0,4.0,[47]],[57.0,1.0,[53,55]],[58.0,1.0,[53,55]],[59.0,1.0,[53,55]],[60.0,4.0,[48]],[61.0,1.0,[52,55]],[62.0,1.0,[52,55]],[63.0,1.0,[52,55]]],"total":64.0,"sections":[0.0,32.0,64.0],"shift":-12},{"no":14,"skip":true}];
+const TEACHER='Fräulein Czerny';
+const say=html=>`<div class="anna"><div class="av">AC</div><div class="bubble"><div class="who">${TEACHER}</div>${html}</div></div>`;
+const DANKE=['Sehr gut!','Wunderbar.','Ja, genau!','Carl would nod. He rarely smiled.','Schön.','Exactly so.','Bravo.'];
+let run=null, daily=null;
+function stopRun(){ if(!run) return; try{run.bus.disconnect();}catch(e){} (run.timers||[]).forEach(clearTimeout); cancelAnimationFrame(run.raf); run=null; }
+function newBus(){ const c=ac(), g=c.createGain(); g.connect(c.destination); return g; }
+function dayStr(off=0){const d=new Date(Date.now()+off*864e5);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function streakInfo(){
+  const s=store.get('streak',{last:null,n:0}), today=s.last===dayStr(), yest=s.last===dayStr(-1);
+  let line;
+  if(!s.last) line=`<p>Guten Tag! I'm Anna, Carl Czerny's older sister. Yes, that Carl, Beethoven's pupil.</p><p>I've borrowed his exercises and travelled rather far to bring them to you. I kept what he got right and changed what I think he'd approve of: no scolding, short sessions, and a little machine that keeps the beat.</p>`;
+  else if(today) line=`<p>You've practiced today. Day ${s.n}! Anything more is a gift.</p>`;
+  else if(yest) line=`<p>Willkommen zurück! You're on day ${s.n}. Shall we make it ${s.n+1}?</p>`;
+  else line=`<p>There you are! Pianos are patient, and so am I. Let's pick up where we left off.</p>`;
+  return {today,line,n:s.n};
+}
+function bumpStreak(){
+  const s=store.get('streak',{last:null,n:0});
+  if(s.last===dayStr()) return s.n;
+  s.n=(s.last===dayStr(-1))?s.n+1:1; s.last=dayStr(); store.set('streak',s); return s.n;
+}
+const WSTEP={0:0,2:1,4:2,5:3,7:4,9:5,11:6};
+function thumbNote(e){ const n=e.rh.find(n=>n[3]); if(!n) return e.rh[0][2];
+  // walk down white keys from the fingered note to where the thumb rests
+  let m=n[2], f=n[3]; while(f>1){ m--; while(isBlack(m)) m--; f--; } return m; }
+function posLabel(e){ return `thumb on ${nm(thumbNote(e))}`; }
+function currentEx(){ const st=store.get('ex',{}); const ok=EX.filter(e=>!e.skip);
+  return ok.find(e=>!((st[e.no]||{}).best>=0.8)) || ok[Math.floor(Math.random()*ok.length)]; }
+function practiceHeader(title){ stopRun(); handler=null; kb.clear(); kb.unhint(); $('#kb').classList.remove('hide-labels');
+  $('#hdrBack').style.display=''; $('#hdrTitle').textContent=title; $('#main').scrollTop=0; }
+
+/* ---- daily session ---- */
+function startDaily(){
+  daily={step:0};
+  const steps=[
+    ()=>keyDrill(6,dailyNext),
+    ()=>cardDrill(8,dailyNext),
+    ()=>{const e=currentEx(); const st=store.get('ex',{})[e.no]||{}; openEx(e.no,{mode:st.learned?'time':'learn',onDone:dailyNext});},
+    ()=>dailyEnd()
+  ];
+  daily.steps=steps; steps[0]();
+}
+function dailyNext(){ if(!daily) return home(); daily.step++; daily.steps[daily.step](); }
+function dailyEnd(){
+  const n=bumpStreak(); daily=null; practiceHeader('Practice');
+  const tips=['Carl\'s rule: a <b>quiet hand</b>. Your hand stays still like a sleeping cat, and only the fingers move.',
+    'Beethoven was one of the first composers to write metronome marks in his music. So the click is respectable.',
+    'Short and often beats long and rare. Carl practiced for hours, but he was a little strange.',
+    'If you have a minute later, play today\'s exercise once more, slowly, without me listening.'];
+  screen.innerHTML=`<div class="card"><div class="big">🎹</div>${say(`<p><b>That's day ${n}.</b> ${pick(DANKE)}</p><p>${pick(tips)}</p>`)}
+    <div class="row"><button class="primary" id="hm">Back to the music room</button></div></div>`;
+  $('#hm').onclick=home;
+}
+
+/* ---- drill: find the key ---- */
+const LANDMARK={0:'just left of the two black keys',2:'between the two black keys',4:'just right of the two black keys',5:'just left of the three black keys',7:'between the first and second of the three black keys',9:'between the second and third of the three black keys',11:'just right of the three black keys'};
+function keyDrill(n,onDone){
+  practiceHeader('Find the key'); $('#kb').classList.add('hide-labels');
+  const pcs=[0,2,4,5,7,9,11]; const qs=[]; let last=-1;
+  for(let i=0;i<n;i++){let p;do{p=pick(pcs);}while(p===last);qs.push(p);last=p;}
+  let q=0,misses=0,first=0; const myRun={}; run=myRun; run.timers=[];
+  const draw=()=>{
+    screen.innerHTML=`<div class="card">${q===0?say('<p>A warm-up. I\'ve hidden the letters on the screen keyboard. Find each note on your piano. Any octave is fine.</p>'):''}
+      <div class="chips">${qs.map((_,i)=>`<div class="chip ${i<q?'done':i===q?'cur':''}" style="min-width:28px;padding:4px;font-size:13px">${i<q?'✓':i+1}</div>`).join('')}</div>
+      <div class="big" style="font-family:Fraunces,Georgia,serif;font-size:72px">${NAMES[qs[q]]}</div>
+      <div class="fb" id="fb">Play ${[4,5,9].includes(qs[q])?'an':'a'} ${NAMES[qs[q]]}.</div>
+      <div class="row"><button class="link" id="skip" style="display:none">Skip</button></div></div>`;
+    $('#skip').onclick=nextQ;
+  };
+  const nextQ=()=>{kb.unhint();$('#kb').classList.add('hide-labels');q++;misses=0;if(q>=qs.length) finish(); else draw();};
+  const finish=()=>{handler=null;$('#kb').classList.remove('hide-labels');
+    screen.innerHTML=`<div class="card">${say(`<p>${first} of ${qs.length} on the first try. ${first>=qs.length-1?pick(DANKE):'The keyboard map grows a little every day.'}</p>`)}
+      <div class="row"><button class="primary" id="nx">${onDone?'Next: reading notes':'Done'}</button><button class="ghost" id="again">Again</button></div></div>`;
+    $('#nx').onclick=onDone||home; $('#again').onclick=()=>keyDrill(n,onDone);};
+  draw();
+  handler=ev=>{ if(run!==myRun) return;
+    const t=qs[q], fb=$('#fb');
+    if(ev.pc===t){ if(!misses) first++; fb.className='fb good'; fb.innerHTML=`<b>${pick(PRAISE)}</b>`; handler=null;
+      run.timers.push(setTimeout(()=>{if(run===myRun){handler=h;nextQ();}},650)); }
+    else { misses++; fb.className='fb miss';
+      if(misses===1) fb.innerHTML=`That was ${nm(ev.midi)}. ${NAMES[t]} is ${LANDMARK[t]}.`;
+      else { fb.innerHTML=`Here, I've lit them up for you.`; $('#kb').classList.remove('hide-labels'); kb.hl(Object.keys(kb.keys).map(Number).filter(m=>pcOf(m)===t),'hint'); if(misses>=3) $('#skip').style.display=''; }
+    }};
+  const h=handler;
+}
+
+/* ---- drill: knowledge of the notes (spaced repetition) ---- */
+const CARD_SEQ=[60,62,64,65,67,69,71,72,74,76,77,79];
+const WHERE={60:'below the staff, on its own little line',62:'just under the bottom line',64:'on the bottom line',65:'in the first space',67:'on the second line',69:'in the second space',71:'on the middle line',72:'in the third space',74:'on the fourth line',76:'in the top space',77:'on the top line',79:'just above the top line'};
+function cardDrill(n,onDone){
+  practiceHeader('Knowledge of the notes');
+  const boxes=store.get('cards',{}); let unlocked=store.get('unlocked',5);
+  CARD_SEQ.slice(0,unlocked).forEach(m=>{if(boxes[m]==null) boxes[m]=2;});
+  let fresh=null;
+  if(unlocked<CARD_SEQ.length && CARD_SEQ.slice(0,unlocked).every(m=>boxes[m]>=3)){
+    fresh=CARD_SEQ[unlocked]; unlocked++; boxes[fresh]=1; store.set('unlocked',unlocked);
+  }
+  store.set('cards',boxes);
+  const pool=CARD_SEQ.slice(0,unlocked);
+  const pickCard=prev=>{ let tot=0; const w=pool.map(m=>{const x=m===prev?0:1/Math.pow(2,(boxes[m]||1)-1);tot+=x;return x;});
+    let r=Math.random()*tot; for(let i=0;i<pool.length;i++){r-=w[i]; if(r<=0) return pool[i];} return pool[0]; };
+  const qs=[]; let prev=null; if(fresh){qs.push(fresh);prev=fresh;}
+  while(qs.length<n){const m=pickCard(prev);qs.push(m);prev=m;}
+  let q=0,misses=0,first=0; const myRun={timers:[]}; run=myRun;
+  const draw=(reveal)=>{ const m=qs[q];
+    screen.innerHTML=`<div class="card">${q===0&&fresh?say(`<p>A new note joins us: <b>${nm(fresh)}</b>, ${WHERE[fresh]}.</p>`):q===0?say('<p>Carl began his book with knowledge of the notes, and so shall we. Read it, then play it.</p>'):''}
+      <div class="chips">${qs.map((_,i)=>`<div class="chip ${i<q?'done':i===q?'cur':''}" style="min-width:28px;padding:4px;font-size:13px">${i<q?'✓':i+1}</div>`).join('')}</div>
+      <div class="staffbox" style="max-width:240px">${staffSVG([{midi:m,name:(reveal||(fresh&&q===0))?nm(m):''}],{minW:150})}</div>
+      <div class="fb" id="fb">${fresh&&q===0?'Play the new note.':'What note is this? Play it.'}</div>
+      <div class="row"><button class="link" id="skip" style="display:none">Skip this one</button></div></div>`;
+    $('#skip').onclick=nextQ; };
+  const nextQ=()=>{kb.unhint();q++;misses=0;if(q>=qs.length) finish(); else draw(false);};
+  const finish=()=>{handler=null; store.set('cards',boxes);
+    const strong=pool.filter(m=>boxes[m]>=3).length;
+    screen.innerHTML=`<div class="card">${say(`<p>${first} of ${qs.length} on the first try. You know ${strong} of your ${pool.length} notes by sight.</p><p>${strong===pool.length&&unlocked<CARD_SEQ.length?'Next time, a new note joins the deck.':'The ones you missed will come back a little more often. That\'s how they stick.'}</p>`)}
+      <div class="row"><button class="primary" id="nx">${onDone?'Next: Carl\'s exercise':'Done'}</button><button class="ghost" id="again">Again</button></div></div>`;
+    $('#nx').onclick=onDone||home; $('#again').onclick=()=>cardDrill(n,onDone);};
+  draw(false);
+  const h=ev=>{ if(run!==myRun) return; const m=qs[q], fb=$('#fb');
+    if(ev.pc===pcOf(m)){ if(!misses){first++;boxes[m]=Math.min(5,(boxes[m]||1)+1);} fb.className='fb good'; fb.innerHTML=`<b>${pick(PRAISE)}</b> That's ${nm(m)}.`;
+      handler=null; myRun.timers.push(setTimeout(()=>{if(run===myRun){handler=h;nextQ();}},900)); }
+    else { misses++; boxes[m]=1;
+      if(misses===1){fb.className='fb miss';fb.innerHTML=`That was ${nm(ev.midi)}. Find a landmark: middle C sits below the staff, G is on the second line. Count up or down from there.`;}
+      else {draw(true); const f=$('#fb'); f.className='fb miss'; f.innerHTML=`It's <b>${nm(m)}</b>, ${WHERE[m]}. It's glowing below.`; kb.hl([m],'hint'); if(misses>=3) $('#skip').style.display='';}
+    }};
+  handler=h;
+}
+
+/* ---- Carl's exercises: learn the notes, then play in time ---- */
+const TEMPI={slow:50,steady:66,brisk:88};
+function systemsOf(e){ // group bars into lines that fit a phone screen
+  const bars=[]; for(let b=0;b<e.total/4;b++) bars.push([]);
+  e.rh.forEach((n,i)=>bars[Math.floor(n[0]/4+1e-6)].push(i));
+  const sys=[]; let curS=[];let wid=0;
+  const bw=b=>b.reduce((x,i)=>x+28+7*e.rh[i][1],0)+12;
+  bars.forEach(b=>{ if(wid&&wid+bw(b)>330){sys.push(curS);curS=[];wid=0;} curS.push(b); wid+=bw(b); });
+  if(curS.length) sys.push(curS); return sys;
+}
+function exStaff(e,cls,opts){
+  const sys=systemsOf(e);
+  const W=Math.max(...sys.map(bs=>62+bs.reduce((a,b)=>a+b.reduce((x,i)=>x+28+7*e.rh[i][1],0)+12,0)+12));
+  return sys.map((bs,si)=>{ const items=[];
+    bs.forEach((b,bi)=>{ b.forEach(i=>{const n=e.rh[i]; items.push({midi:n[2],d:n[1],w:28+7*n[1],finger:opts.fingers?n[3]:'',name:opts.names?nm(n[2]):'',cls:cls(i),tag:opts.tag?opts.tag(i):''});});
+      items.push({bar:true,final:si===sys.length-1&&bi===bs.length-1}); });
+    return `<div class="staffbox" data-s="${si}">${staffSVG(items,{minW:W,tags:!!opts.tag})}</div>`; }).join('');
+}
+function sysIndexOf(e,i){ const sys=systemsOf(e); for(let s=0;s<sys.length;s++) if(sys[s].some(b=>b.includes(i))) return s; return 0; }
+
+function openEx(no,o){
+  const e=EX.find(x=>x.no===no); const stAll=store.get('ex',{}); const st=stAll[no]||{};
+  practiceHeader('Op. 599 No. '+no);
+  const pref=store.get('exprefs',{names:true,accomp:true,tempo:'slow'});
+  let mode=o.mode||(st.learned?'time':'learn');
+  const intro=st.learned?`<p>No. ${no} again. ${pick(DANKE)}</p>`:
+    `<p>Carl's No. ${no}. Right hand, <b>${posLabel(e)}</b>. The small numbers are his fingerings.</p>${e.shift?`<p>He wrote it ${e.shift===-12?'an octave':'two octaves'} higher up the piano. I've moved it to where you read. He'd forgive me.</p>`:''}${pref.accomp?'<p>I\'ll play his left-hand part, so we\'re a duet.</p>':''}`;
+  screen.innerHTML=`<div class="card">${say(intro)}
+    <div class="seg" id="mode"><button data-m="learn">Learn the notes</button><button data-m="time">Play in time</button></div>
+    <div id="exbody"></div></div>`;
+  const setMode=m=>{ mode=m; stopRun(); handler=null; kb.unhint(); screen.querySelectorAll('#mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); (m==='learn'?exLearn:exTime)(e,pref,o); };
+  screen.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+  setMode(mode);
+}
+function savePref(p){store.set('exprefs',p);}
+function markEx(no,patch){ const all=store.get('ex',{}); all[no]=Object.assign(all[no]||{},patch); store.set('ex',all); }
+
+function exLearn(e,pref,o){
+  const body=$('#exbody'); let idx=0, misses=0; const myRun={timers:[]}; run=myRun;
+  body.innerHTML=`<p class="prompt" style="font-size:17px">Play each note when you're ready. I'll wait for you${pref.accomp?' and answer with the left hand':''}.</p>
+    <div class="opts"><button class="ghost ${pref.names?'on':''}" id="tNames">Note names</button><button class="ghost ${pref.accomp?'on':''}" id="tAcc">🎹 My left hand</button><button class="ghost" id="hear">▶ Hear it</button></div>
+    <div id="disp"></div><div class="fb" id="fb">${mic.state==='on'?'Listening… begin whenever you like.':'Play on your piano, or tap the keys below.'}</div>
+    <div class="row" id="fin" style="display:none"><button class="primary" id="nx">${o.onDone?'Finish today\'s practice':'Now play it in time'}</button><button class="ghost" id="again">Again</button></div>`;
+  const draw=()=>{ $('#disp').innerHTML=exStaff(e,i=>i<idx?'n-done':i===idx?'n-cur':'',{fingers:true,names:pref.names});
+    const box=$('#disp').querySelector(`[data-s="${sysIndexOf(e,idx)}"]`); if(box&&idx>0) box.scrollIntoView({block:'nearest',behavior:'smooth'}); };
+  draw();
+  $('#tNames').onclick=ev=>{pref.names=!pref.names;savePref(pref);ev.currentTarget.classList.toggle('on',pref.names);draw();};
+  $('#tAcc').onclick=ev=>{pref.accomp=!pref.accomp;savePref(pref);ev.currentTarget.classList.toggle('on',pref.accomp);};
+  $('#hear').onclick=()=>demoEx(e,TEMPI.steady,pref.accomp);
+  $('#again').onclick=()=>exLearn(e,pref,o);
+  $('#nx').onclick=()=>{ if(o.onDone) o.onDone(); else { screen.querySelectorAll('#mode button').forEach(b=>b.classList.toggle('on',b.dataset.m==='time')); exTime(e,pref,o);} };
+  const answer=i=>{ if(!pref.accomp) return; const t0=e.rh[i][0], t1=i+1<e.rh.length?e.rh[i+1][0]:e.total, beat=0.6;
+    if(!run.bus) run.bus=newBus();
+    e.lh.filter(l=>l[0]>=t0&&l[0]<t1).forEach(l=>l[2].forEach(m=>tone(m,(l[0]-t0)*beat,Math.min(l[1],t1-l[0]+1)*beat,{vol:0.13,noMute:true,accomp:true,dest:run.bus}))); };
+  handler=ev=>{ if(run!==myRun||idx>=e.rh.length) return;
+    const target=e.rh[idx][2], fb=$('#fb');
+    if(ev.pc===pcOf(target)){
+      answer(idx); idx++; misses=0; kb.unhint(); fb.className='fb good';
+      if(idx>=e.rh.length){ draw(); markEx(e.no,{learned:true}); fb.innerHTML=`<b>${pick(DANKE)}</b> You've learned No. ${e.no}. ${o.onDone?'':'Next, let\'s try it with the beat.'}`; $('#fin').style.display=''; setTimeout(()=>$('#fin').scrollIntoView({block:'nearest',behavior:'smooth'}),60); handler=null; }
+      else { fb.innerHTML=`<b>${nm(target)}</b> ✓`; draw(); }
+    } else {
+      misses++; fb.className='fb miss';
+      if(misses===1) fb.innerHTML=`That was ${nm(ev.midi)}. We want <b>${nm(target)}</b>, finger ${e.rh[idx][3]}.`;
+      else { fb.innerHTML=`<b>${nm(target)}</b>, with finger ${e.rh[idx][3]}. It's glowing below.`; kb.hl([target],'hint'); }
+    }
+  };
+}
+
+function demoEx(e,qpm,accomp){
+  stopRun(); const c=ac(), beat=60/qpm, start=c.currentTime+0.15; run={bus:newBus(),timers:[]};
+  e.rh.forEach(n=>{ tone(n[2],start-c.currentTime+n[0]*beat,n[1]*beat*0.95,{dest:run.bus,noMute:true}); run.timers.push(setTimeout(()=>kb.flash(n[2]),(start-c.currentTime+n[0]*beat)*1000)); });
+  if(accomp) e.lh.forEach(l=>l[2].forEach(m=>tone(m,start-c.currentTime+l[0]*beat,l[1]*beat*0.95,{vol:0.14,dest:run.bus,noMute:true})));
+  muteUntil=performance.now()+(e.total*beat+0.6)*1000;
+}
+
+function exTime(e,pref,o){
+  stopRun(); const body=$('#exbody');
+  const best=(store.get('ex',{})[e.no]||{}).best;
+  body.innerHTML=`<p class="prompt" style="font-size:17px">I'll count you in with four clicks, then keep the beat. Keep going even if a note slips. The music doesn't stop, and neither do we.</p>
+    <div class="opts">Tempo <div class="seg sm" id="tempo">${Object.keys(TEMPI).map(k=>`<button data-t="${k}" class="${pref.tempo===k?'on':''}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+      <button class="ghost ${pref.accomp?'on':''}" id="tAcc">🎹 My left hand</button></div>
+    <div class="count" id="count"></div>
+    <div id="disp"></div>
+    <div class="fb" id="fb">${best!=null?`Your best so far: ${Math.round(best*100)}% in time.`:'Tip: earbuds keep my playing out of the microphone.'}</div>
+    <div class="row" id="ctl"><button class="primary" id="go">▶ Start</button></div>`;
+  const draw=(cls,tag)=>{$('#disp').innerHTML=exStaff(e,cls||(()=>''),{fingers:true,names:false,tag});};
+  draw();
+  body.querySelectorAll('#tempo button').forEach(b=>b.onclick=()=>{pref.tempo=b.dataset.t;savePref(pref);body.querySelectorAll('#tempo button').forEach(x=>x.classList.toggle('on',x===b));});
+  $('#tAcc').onclick=ev=>{pref.accomp=!pref.accomp;savePref(pref);ev.currentTarget.classList.toggle('on',pref.accomp);};
+  $('#go').onclick=()=>startTimed(e,pref,o,draw);
+}
+
+function startTimed(e,pref,o,draw){
+  stopRun(); const c=ac(); const qpm=TEMPI[pref.tempo], beat=60/qpm;
+  const myRun={bus:newBus(),timers:[]}; run=myRun;
+  const lat=(c.outputLatency||c.baseLatency||0);
+  const t0=c.currentTime+0.35, start=t0+4*beat, end=start+e.total*beat;
+  myRun.start=start; myRun.beat=beat;
+  for(let i=0;i<4;i++) click(t0+i*beat,i===0,myRun.bus);
+  for(let b=0;b<e.total;b++) click(start+b*beat,b%4===0,myRun.bus);
+  if(pref.accomp) e.lh.forEach(l=>l[2].forEach(m=>tone(m,start-c.currentTime+l[0]*beat,l[1]*beat*0.95,{vol:0.12,dest:myRun.bus,noMute:true,accomp:true})));
+  const N=e.rh.length;
+  const exp=e.rh.map((n,i)=>{ const t=start+n[0]*beat;
+    const pg=(i>0?n[0]-e.rh[i-1][0]:4)*beat, ng=(i<N-1?e.rh[i+1][0]-n[0]:4)*beat;
+    return {t,lo:t-Math.min(0.5*pg,0.45),hi:t+Math.min(0.5*ng,0.45),res:null,dt:0}; });
+  let wrong=0, lastCur=-2, dirty=true;
+  $('#ctl').innerHTML='<button class="ghost" id="stop">■ Stop</button>';
+  $('#stop').onclick=()=>{stopRun();handler=null;exTime(e,pref,o);};
+  const cls=i=>{const r=exp[i].res; if(r) return 'n-'+r; return i===lastCur?'n-cur':'';};
+  const tag=i=>{const r=exp[i].res; return r==='early'?'early':r==='late'?'late':'';};
+  const fb=()=>$('#fb');
+  handler=ev=>{ if(run!==myRun) return;
+    const evA=c.currentTime-(performance.now()-ev.t)/1000;
+    const tt=evA-(ev.source==='mic'?lat+0.04:lat);
+    const cands=exp.map((x,i)=>i).filter(i=>!exp[i].res&&tt>=exp[i].lo&&tt<=exp[i].hi);
+    const hit=cands.find(i=>pcOf(e.rh[i][2])===ev.pc);
+    if(hit!=null){ const dt=tt-exp[hit].t; exp[hit].dt=dt; exp[hit].res=Math.abs(dt)<=0.13?'ok':dt<0?'early':'late'; dirty=true; }
+    else if(tt>start-beat*0.5&&tt<end){ wrong++; const f=fb(); f.className='fb miss'; const want=cands.length?nm(e.rh[cands[0]][2]):null; f.innerHTML=want?`That was ${nm(ev.midi)}. Looking for ${want}. Keep going!`:`That was ${nm(ev.midi)}. Keep going!`; }
+  };
+  const tick=()=>{ if(run!==myRun) return;
+    const now=c.currentTime-lat;
+    const cd=Math.ceil((start-now)/beat);
+    $('#count').textContent=now<start?(cd<=4&&cd>=1?String(5-cd):''):'';
+    exp.forEach(x=>{ if(!x.res&&now>x.hi+0.08){x.res='miss';dirty=true;} });
+    let curI=-1; for(let i=0;i<N;i++) if(exp[i].t<=now+0.05) curI=i;
+    if(curI!==lastCur){lastCur=curI;dirty=true;}
+    if(dirty){ dirty=false; draw(cls,tag); const box=$('#disp').querySelector(`[data-s="${sysIndexOf(e,Math.max(0,curI))}"]`); if(box&&curI>0) box.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    if(now>end+0.5) return finish();
+    myRun.raf=requestAnimationFrame(tick);
+  };
+  myRun.raf=requestAnimationFrame(tick);
+  const finish=()=>{ handler=null; lastCur=-2;
+    const cnt={ok:0,early:0,late:0,miss:0}; exp.forEach(x=>cnt[x.res||'miss']++);
+    const score=(cnt.ok+0.6*(cnt.early+cnt.late))/N;
+    const prevBest=(store.get('ex',{})[e.no]||{}).best||0;
+    markEx(e.no,{best:Math.max(prevBest,score),learned:true});
+    draw(cls,tag); $('#count').textContent='';
+    let advice;
+    if(cnt.miss>N*0.35) advice='Lots of notes slipped by. That just means the tempo is ahead of your fingers for now. Try <b>Learn the notes</b> once more, or the Slow tempo.';
+    else if(cnt.late>cnt.early*2&&cnt.late>2) advice='You tend to arrive a little late. Very normal! Count "1, 2, 3, 4" out loud with the clicks and let the count pull your fingers along.';
+    else if(cnt.early>cnt.late*2&&cnt.early>2) advice='Eager fingers! Let each note wait for its click. Long notes especially: hold them for their full count.';
+    else if(score>=0.8) advice=pref.tempo==='slow'?'That\'s a real performance. When you\'re ready, try Steady.':pref.tempo==='steady'?'Lovely and steady. Brisk is waiting for you, whenever you like.':'Brisk! Carl marked this one even faster, but he also never slept.';
+    else advice='Getting there. One more time usually helps more than you\'d expect.';
+    const f=fb(); f.className='fb'+(score>=0.8?' good':'');
+    f.innerHTML=`<div class="stats"><div><b>${cnt.ok}</b>on the beat</div><div><b>${cnt.early}</b>a bit early</div><div><b>${cnt.late}</b>a bit late</div><div><b>${cnt.miss}</b>slipped by</div></div>${score>prevBest&&prevBest>0?'<b>A new best!</b> ':''}${advice}`;
+    $('#ctl').innerHTML=`<button class="primary" id="again">↺ Again</button>${o.onDone?'<button class="primary" id="fin">Finish today\'s practice</button>':'<button class="ghost" id="back">Back to the exercises</button>'}`;
+    $('#again').onclick=()=>startTimed(e,pref,o,draw);
+    if(o.onDone) $('#fin').onclick=o.onDone; else $('#back').onclick=home;
+    setTimeout(()=>$('#ctl').scrollIntoView({block:'nearest',behavior:'smooth'}),60);
+  };
 }
 
 /* ---------- start ---------- */
